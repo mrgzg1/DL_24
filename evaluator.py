@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from schedulers import Scheduler, LRSchedule
-from models import Prober, build_mlp
+from models.prober import Prober, build_mlp
 from configs import ConfigBase
 
 from dataset import WallDataset
@@ -38,6 +38,7 @@ default_config = ProbingConfig()
 
 
 def location_losses(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+
     assert pred.shape == target.shape
     mse = (pred - target).pow(2).mean(dim=0)
     return mse
@@ -125,7 +126,8 @@ class ProbingEvaluator:
 
                 losses_list = []
 
-                target = getattr(batch, "locations").cuda()
+                # target = getattr(batch, "locations").cuda()
+                target = getattr(batch, "locations").cpu()
                 target = self.normalizer.normalize_location(target)
 
                 if (

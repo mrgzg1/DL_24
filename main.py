@@ -1,7 +1,9 @@
 from dataset import create_wall_dataloader
 from evaluator import ProbingEvaluator
+from train import TrainJEPA
 import torch
-from models import MockModel
+# from models.prober import MockModel
+from models.jepa import JEPA
 import glob
 
 
@@ -44,7 +46,7 @@ def load_data(device):
 def load_model():
     """Load or initialize the model."""
     # TODO: Replace MockModel with your trained model
-    model = MockModel()
+    model = JEPA(device="cpu")
     return model
 
 
@@ -64,9 +66,16 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
     for probe_attr, loss in avg_losses.items():
         print(f"{probe_attr} loss: {loss}")
 
+def train_jepa(device, model, train_ds, val_ds, momentum):
+    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, momentum=momentum)
+    model = trainer.train()
+
+
+
 
 if __name__ == "__main__":
     device = get_device()
     probe_train_ds, probe_val_ds = load_data(device)
     model = load_model()
-    evaluate_model(device, model, probe_train_ds, probe_val_ds)
+    # evaluate_model(device, model, probe_train_ds, probe_val_ds)
+    train_jepa(device, model, probe_train_ds, probe_val_ds, momentum=0.99)

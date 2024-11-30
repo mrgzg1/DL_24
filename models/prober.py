@@ -20,7 +20,7 @@ class MockModel(torch.nn.Module):
     Does nothing. Just for testing.
     """
 
-    def __init__(self, device="cuda", bs=64, n_steps=17, output_dim=256):
+    def __init__(self, device="cpu", bs=64, n_steps=17, output_dim=256):
         super().__init__()
         self.device = device
         self.bs = bs
