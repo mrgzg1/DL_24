@@ -5,6 +5,9 @@ import torch
 # from models.prober import MockModel
 from models.jepa import JEPA
 import glob
+import sys
+import time
+import os
 
 
 def get_device():
@@ -66,16 +69,28 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
     for probe_attr, loss in avg_losses.items():
         print(f"{probe_attr} loss: {loss}")
 
-def train_jepa(device, model, train_ds, val_ds, momentum):
-    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, momentum=momentum)
+def train_jepa(device, model, train_ds, val_ds, momentum, best_model_path):
+    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, momentum=momentum, save_path=best_model_path)
     model = trainer.train()
+
+def save_model(model, path):
+    torch.save(model.state_dict(), path)
 
 
 
 
 if __name__ == "__main__":
+
+    # Set global paths
+    folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
+    best_model_path = folder_path + "best_models/"
+
+    # Create model path if it does not exist
+    if not os.path.exists(best_model_path):
+        os.makedirs(best_model_path)
+
     device = get_device()
     probe_train_ds, probe_val_ds = load_data(device)
     model = load_model()
     # evaluate_model(device, model, probe_train_ds, probe_val_ds)
-    train_jepa(device, model, probe_train_ds, probe_val_ds, momentum=0.99)
+    train_jepa(device, model, probe_train_ds, probe_val_ds, momentum=0.99, best_model_path=best_model_path)

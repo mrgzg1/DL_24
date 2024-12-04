@@ -26,13 +26,14 @@ class JEPAConfig(ConfigBase):
 default_config = JEPAConfig()
 
 class TrainJEPA():
-    def __init__(self, device, model, train_ds, val_ds, momentum, config=default_config):
+    def __init__(self, device, model, train_ds, val_ds, momentum, save_path, config=default_config):
         self.device = device
         self.model = model
         self.train_ds = train_ds
         self.val_ds = val_ds
         self.config = config
         self.momentum = momentum
+        self.save_path = save_path
 
 
     def train(self):
@@ -49,12 +50,14 @@ class TrainJEPA():
                         batch_size=self.train_ds.batch_size,
                     )
 
+        best_train_loss = float('inf')
+
         for epoch in range(self.config.epochs):
             
             total_energy = 0.0
             
             with tqdm(total=len(self.train_ds), desc=f"Epoch [{epoch+1}/{self.config.epochs}]", unit="batch") as pbar:
-                for batch in tqdm(self.train_ds, desc="Probe prediction step"):
+                for batch in tqdm(self.train_ds, desc="Prediction step"):
                     obs = batch.states.to(self.device)
                     actions = batch.actions.to(self.device)
                     
@@ -82,8 +85,14 @@ class TrainJEPA():
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
 
+            if avg_energy < best_train_loss:
+                best_train_loss = avg_energy
+                self.save_model(self.save_path)
+
+
 
         return self.model   
+
 
     def _off_diagonal(self, matrix):
         """
@@ -131,3 +140,7 @@ class TrainJEPA():
         loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
 
         return loss
+
+    def save_model(self, path):
+        path = os.path.join(path, "best_model.pth")
+        torch.save(self.model.state_dict(), path)
