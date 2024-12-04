@@ -18,6 +18,11 @@ class JEPAConfig(ConfigBase):
     epochs: int = 20
     schedule: LRSchedule = LRSchedule.Cosine
 
+    # VicReg loss parameters
+    sim_coeff: float = 0.1
+    std_coeff: float = 0.1
+    cov_coeff: float = 0.1
+
 default_config = JEPAConfig()
 
 class TrainJEPA():
@@ -28,6 +33,7 @@ class TrainJEPA():
         self.val_ds = val_ds
         self.config = config
         self.momentum = momentum
+
 
     def train(self):
         self.model.to(self.device)
@@ -56,12 +62,8 @@ class TrainJEPA():
 
                     pred_enc, tgt_enc = self.model(obs, actions, get_tgt_enc=True)
 
-                    # Flatten the representations to combine batch and sequence dimensions
-                    pred_enc_flat = pred_enc.view(-1, pred_enc.size(-1))
-                    tgt_enc_flat = tgt_enc.view(-1, tgt_enc.size(-1))
-
                     # Compute the loss using the energy distance
-                    loss = self.compute_loss(pred_enc_flat, tgt_enc_flat)
+                    loss = self.vicreg_loss(pred_enc, tgt_enc)
 
                     # Backward pass 
                     loss.backward() 
@@ -83,15 +85,49 @@ class TrainJEPA():
 
         return self.model   
 
-    def compute_loss(self, pred_enc, tgt_enc):
+    def _off_diagonal(self, matrix):
         """
-        Compute the energy distance between the predicted and target encodings
+        Return the off-diagonal elements of a square matrix
         """
-        # Normalize the representations
-        pred_enc = F.normalize(pred_enc, dim=-1)
-        tgt_enc = F.normalize(tgt_enc, dim=-1)
+        n, _ = matrix.shape
+        return matrix.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
 
-        # Compute the energy distance
-        loss = F.mse_loss(pred_enc, tgt_enc)
+    def vicreg_loss(self, pred_enc, tgt_enc):
+        """
+        Compute the VicReg loss between the predicted and target encodings
+        
+        Args:
+            pred_enc: [B, T, D]
+            tgt_enc: [B, T, D]
+
+        Output:
+            loss: float
+        """
+
+        # Reshape the predicted and target encodings
+        B, T, D = pred_enc.size()
+        pred_enc = pred_enc.view(B*T, D)
+        tgt_enc = tgt_enc.view(B*T, D)
+
+        # Compute invarience loss
+        repr_loss = F.mse_loss(pred_enc, tgt_enc)
+
+        # Normalize by centering 
+        pred_enc = pred_enc - pred_enc.mean(dim=0)
+        tgt_enc = tgt_enc - tgt_enc.mean(dim=0)
+
+        # Varience Regularization 
+        std_pred = torch.sqrt(pred_enc.var(dim=0) + 1e-4)
+        std_tgt =  torch.sqrt(tgt_enc.var(dim=0) + 1e-4) 
+        std_loss = torch.mean(F.relu(1 - std_pred)) / 2 + torch.mean(F.relu(1 - std_tgt)) / 2
+
+        # Covariance Regularization
+        cov_pred = (pred_enc.t() @ pred_enc) / (B*T - 1) # D x D
+        cov_tgt  = (tgt_enc.t() @ tgt_enc)  / (B*T - 1)  # D x D
+
+        cov_loss = self._off_diagonal(cov_pred).pow(2).sum().div(D) + \
+                   self._off_diagonal(cov_tgt).pow(2).sum().div(D)
+
+        loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
 
         return loss
