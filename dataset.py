@@ -17,16 +17,16 @@ class WallDataset:
         device="cuda",
     ):
         self.device = device
-        # self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-        # self.actions = np.load(f"{data_path}/actions.npy")
+        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+        self.actions = np.load(f"{data_path}/actions.npy")
 
         # Create random data
-        self.states =  np.random.rand(1000, 17, 2, 65, 65)
-        self.actions = np.random.rand(1000, 16, 2)
+        # self.states =  np.random.rand(1000, 17, 2, 65, 65)
+        # self.actions = np.random.rand(1000, 16, 2)
 
         if probing:
-            # self.locations = np.load(f"{data_path}/locations.npy")
-            self.locations = np.random.rand(1000, 17, 2)
+            self.locations = np.load(f"{data_path}/locations.npy")
+            # self.locations = np.random.rand(1000, 17, 2)
         else:
             self.locations = None
 
