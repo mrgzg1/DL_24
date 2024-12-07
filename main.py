@@ -8,7 +8,11 @@ import glob
 import sys
 import time
 import os
+from configs import parse_args, save_args, check_folder_paths, load_args
 
+
+
+TRAIN_JEPA = False
 
 def get_device():
     """Check for GPU availability."""
@@ -17,14 +21,15 @@ def get_device():
     return device
 
 
-def load_data(device):
-    data_path = "/scratch/DL24FA"
+def load_data(device, batch_size):
+    data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
 
     probe_train_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_normal/train",
         probing=True,
         device=device,
         train=True,
+        batch_size=batch_size,
     )
 
     probe_val_normal_ds = create_wall_dataloader(
@@ -32,6 +37,7 @@ def load_data(device):
         probing=True,
         device=device,
         train=False,
+        batch_size=batch_size,
     )
 
     probe_val_wall_ds = create_wall_dataloader(
@@ -39,6 +45,7 @@ def load_data(device):
         probing=True,
         device=device,
         train=False,
+        batch_size=batch_size,
     )
 
     probe_val_ds = {"normal": probe_val_normal_ds, "wall": probe_val_wall_ds}
@@ -69,28 +76,61 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
     for probe_attr, loss in avg_losses.items():
         print(f"{probe_attr} loss: {loss}")
 
-def train_jepa(device, model, train_ds, val_ds, momentum, best_model_path):
-    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, momentum=momentum, save_path=best_model_path)
+def train_jepa(device, model, train_ds, val_ds, config, save_path):
+    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, config=config, save_path=save_path)
     model = trainer.train()
 
 def save_model(model, path):
     torch.save(model.state_dict(), path)
 
-
-
+def load_model_weights(model, path, device):
+    # Load model weights and move to device
+    model.load_state_dict(torch.load(path, map_location=device))
+    model = model.to(device)
+    model.device = device
+    return model
 
 if __name__ == "__main__":
 
-    # Set global paths
-    folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
-    best_model_path = folder_path + "best_models/"
+    if TRAIN_JEPA:
 
-    # Create model path if it does not exist
-    if not os.path.exists(best_model_path):
-        os.makedirs(best_model_path)
+        # parse arguments
+        args = parse_args()
 
-    device = get_device()
-    probe_train_ds, probe_val_ds = load_data(device)
-    model = load_model()
-    # evaluate_model(device, model, probe_train_ds, probe_val_ds)
-    train_jepa(device, model, probe_train_ds, probe_val_ds, momentum=0.99, best_model_path=best_model_path)
+        # Set global paths
+        folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
+        resources_path = folder_path + "resources/"
+        experiment_path = resources_path + "experiments/" + time.strftime("%Y%m%d-%H%M%S") + "_" + str(args.run_id) + "/"
+
+        check_folder_paths([os.path.join(experiment_path, "checkpoints")])
+        # save arguments
+        save_args(args, os.path.join(experiment_path, "args.txt"))
+
+        model_path = experiment_path + "checkpoints/"
+        device = get_device()
+        probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
+        model = load_model()
+        train_jepa(device, model, probe_train_ds, probe_val_ds, config=args, save_path=model_path)
+
+    else:
+        
+        # parse arguments
+        args = parse_args()
+
+        folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
+        resources_path = folder_path + "resources/"
+
+        experiment_path = max(glob.glob(resources_path + "experiments/*/"), key=os.path.getctime) 
+        model_path = max(glob.glob(experiment_path + "checkpoints/*.pth", recursive=True), key=os.path.getctime)
+
+        print(experiment_path)
+        print("Testing JEPA model:", model_path)
+        args = load_args(experiment_path + "args.txt")
+
+
+        device = get_device()
+        probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
+        model = load_model()
+        
+        model = load_model_weights(model, model_path, device)
+        evaluate_model(device, model, probe_train_ds, probe_val_ds)

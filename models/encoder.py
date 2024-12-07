@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torchvision.models import resnet18
+from torchvision.models import resnet18, resnet34, resnet50
 
 class ResNetEncoder(nn.Module):
     def __init__(self, enc_dim):
@@ -8,8 +8,8 @@ class ResNetEncoder(nn.Module):
 
         self.enc_dim = enc_dim
         # Modify the first convolution layer to accept 2 channels
-        self.resnet = resnet18(pretrained=True)
-        self.resnet.conv1 = nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        self.resnet = resnet34(pretrained=False)
+        self.resnet.conv1 = nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
         # Modify the output layer to output enc_dim features
         self.resnet.fc = nn.Linear(512, enc_dim)
         

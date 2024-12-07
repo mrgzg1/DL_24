@@ -13,26 +13,13 @@ from schedulers import Scheduler, LRSchedule
 from configs import ConfigBase
 
 
-class JEPAConfig(ConfigBase):
-    lr: float = 0.0002
-    epochs: int = 20
-    schedule: LRSchedule = LRSchedule.Cosine
-
-    # VicReg loss parameters
-    sim_coeff: float = 0.1
-    std_coeff: float = 0.1
-    cov_coeff: float = 0.1
-
-default_config = JEPAConfig()
-
 class TrainJEPA():
-    def __init__(self, device, model, train_ds, val_ds, momentum, save_path, config=default_config):
+    def __init__(self, device, model, train_ds, val_ds, config, save_path):
         self.device = device
         self.model = model
         self.train_ds = train_ds
         self.val_ds = val_ds
         self.config = config
-        self.momentum = momentum
         self.save_path = save_path
 
 
@@ -40,10 +27,10 @@ class TrainJEPA():
         self.model.to(self.device)
         self.model.train()
 
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.lr)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
         scheduler = Scheduler(
-                        schedule=self.config.schedule,
-                        base_lr=self.config.lr,
+                        schedule=LRSchedule.Cosine,
+                        base_lr=self.config.warmup_lr,
                         data_loader=self.train_ds,
                         epochs=self.config.epochs,
                         optimizer=optimizer,
@@ -74,7 +61,7 @@ class TrainJEPA():
                     optimizer.step()
 
                     # Update the target encoder
-                    self.model.update_target_encoder(self.momentum)
+                    self.model.update_target_encoder(self.config.momentum)
 
                     total_energy += loss.item()
 

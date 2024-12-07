@@ -42,7 +42,7 @@ class JEPA(nn.Module):
         self.repr_dim = 256
         self.encoder = ResNetEncoder(enc_dim=enc_dim)
         self.target_encoder = ResNetEncoder(enc_dim=enc_dim)
-        self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="256-256-256", n_steps=n_steps)
+        self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="1024-1024-1024", n_steps=n_steps)
 
         self._init_target_encoder()
     
