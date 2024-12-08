@@ -56,7 +56,7 @@ def load_data_probe(device, batch_size):
 def load_data_jepa(device, batch_size):
     
     data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
-
+    data_path = "/data/DL_24/data"
     train_ds = create_wall_dataloader(
         data_path=f"{data_path}/train",
         probing=False,
