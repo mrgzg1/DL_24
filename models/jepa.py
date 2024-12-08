@@ -31,7 +31,7 @@ import numpy as np
 import copy
 from typing import List
 from torchvision.models import resnet18
-from .encoder import ResNetEncoder
+from .encoder import ResNetEncoder, CNNBackbone
 from .predictor import Predictor
 
 class JEPA(nn.Module):
@@ -42,7 +42,7 @@ class JEPA(nn.Module):
         self.n_steps = n_steps
         self.repr_dim = 256
         self.config = config
-        self.encoder = ResNetEncoder(enc_dim=enc_dim)
+        self.encoder = CNNBackbone(n_kernels=32, repr_dim=enc_dim)
         self.target_encoder = self.get_target_encoder()
         self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="1024-1024-1024", n_steps=n_steps)
 
@@ -56,7 +56,7 @@ class JEPA(nn.Module):
                 param.requires_grad = False
 
         elif self.config.loss_type == 'vicreg':
-            target_encoder = ResNetEncoder(enc_dim=self.repr_dim)
+            target_encoder = CNNBackbone(n_kernels=32, enc_dim=self.repr_dim)
 
         return target_encoder
 

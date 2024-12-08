@@ -14,11 +14,10 @@ from configs import ConfigBase
 
 
 class TrainJEPA():
-    def __init__(self, device, model, train_ds, val_ds, config, save_path):
+    def __init__(self, device, model, train_ds, config, save_path):
         self.device = device
         self.model = model
         self.train_ds = train_ds
-        self.val_ds = val_ds
         self.config = config
         self.save_path = save_path
 

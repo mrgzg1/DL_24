@@ -12,7 +12,7 @@ from configs import parse_args, save_args, check_folder_paths, load_args
 
 
 
-TRAIN_JEPA = False
+TRAIN_JEPA = True
 
 def get_device():
     """Check for GPU availability."""
@@ -21,7 +21,7 @@ def get_device():
     return device
 
 
-def load_data(device, batch_size):
+def load_data_probe(device, batch_size):
     data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
 
     probe_train_ds = create_wall_dataloader(
@@ -53,6 +53,21 @@ def load_data(device, batch_size):
     return probe_train_ds, probe_val_ds
 
 
+def load_data_jepa(device, batch_size):
+    
+    data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
+
+    train_ds = create_wall_dataloader(
+        data_path=f"{data_path}/train",
+        probing=False,
+        device=device,
+        train=True,
+        batch_size=batch_size,
+    )
+
+    return train_ds
+
+
 def load_model(device, config):
     """Load or initialize the model."""
     # TODO: Replace MockModel with your trained model
@@ -76,8 +91,8 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
     for probe_attr, loss in avg_losses.items():
         print(f"{probe_attr} loss: {loss}")
 
-def train_jepa(device, model, train_ds, val_ds, config, save_path):
-    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, config=config, save_path=save_path)
+def train_jepa(device, model, train_ds, config, save_path):
+    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, config=config, save_path=save_path)
     model = trainer.train()
 
 def save_model(model, path):
@@ -108,9 +123,9 @@ if __name__ == "__main__":
 
         model_path = experiment_path + "checkpoints/"
         device = get_device()
-        probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
+        train_ds = load_data_jepa(device, args.batch_size)
         model = load_model(device, args)
-        train_jepa(device, model, probe_train_ds, probe_val_ds, config=args, save_path=model_path)
+        train_jepa(device, model, train_ds, config=args, save_path=model_path)
 
     else:
         
