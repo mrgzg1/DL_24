@@ -53,7 +53,12 @@ class TrainJEPA():
                     pred_enc, tgt_enc = self.model(obs, actions, get_tgt_enc=True)
 
                     # Compute the loss using the energy distance
-                    loss = self.vicreg_loss(pred_enc, tgt_enc)
+                    if self.config.loss_type == 'vicreg':
+                        loss = self.vicreg_loss(pred_enc, tgt_enc)
+
+                    elif self.config.loss_type == 'byol':
+                        loss = self.byol_loss(pred_enc, tgt_enc)
+
 
                     # Backward pass 
                     loss.backward() 
@@ -79,7 +84,6 @@ class TrainJEPA():
 
 
         return self.model   
-
 
     def _off_diagonal(self, matrix):
         """
@@ -125,6 +129,45 @@ class TrainJEPA():
                    self._off_diagonal(cov_tgt).pow(2).sum().div(D)
 
         loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
+
+        return loss
+
+    ######### BYOL Loss #########
+    def _update_moving_average(self, old, new):
+        """Exponential moving average update for target network parameters"""
+        if old is None:
+            return copy.deepcopy(new)
+        return old * self.momentum + (1 - self.momentum) * new
+
+    def update_target_network(self):
+        """Update target network parameters using exponential moving average"""
+        for online_params, target_params in zip(self.model.parameters(), 
+                                              self.target_network.parameters()):
+            old_weight, up_weight = target_params.data, online_params.data
+            target_params.data = self._update_moving_average(old_weight, up_weight)
+
+    def byol_loss(self, pred_enc, tgt_enc):
+        """
+        Compute the BYOL loss between the predicted and target encodings
+        
+        Args:
+            pred_enc: [B, T, D] - Output from predictor network
+            tgt_enc: [B, T, D] - Output from target network (detached)
+
+        Output:
+            loss: float - BYOL loss value
+        """
+        # Reshape the predicted and target encodings
+        B, T, D = pred_enc.size()
+        pred_enc = pred_enc.view(B*T, D)
+        tgt_enc = tgt_enc.view(B*T, D)
+
+        # Normalize the representations
+        pred_enc = F.normalize(pred_enc, dim=-1, p=2)
+        tgt_enc = F.normalize(tgt_enc, dim=-1, p=2)
+
+        
+        loss = -2 * (pred_enc * tgt_enc.detach()).sum(dim=-1).mean()
 
         return loss
 

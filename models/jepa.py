@@ -28,28 +28,42 @@ The model should have the following architecture:
 import torch
 import torch.nn as nn
 import numpy as np
+import copy
 from typing import List
 from torchvision.models import resnet18
 from .encoder import ResNetEncoder
 from .predictor import Predictor
 
 class JEPA(nn.Module):
-    def __init__(self, device="cpu", bs=64, n_steps=17, enc_dim=256, action_dim=2):
+    def __init__(self, device="cpu", bs=64, n_steps=17, enc_dim=256, action_dim=2, config=None):
         super(JEPA, self).__init__()
         self.device = device
         self.bs = bs
         self.n_steps = n_steps
         self.repr_dim = 256
+        self.config = config
         self.encoder = ResNetEncoder(enc_dim=enc_dim)
-        self.target_encoder = ResNetEncoder(enc_dim=enc_dim)
+        self.target_encoder = self.get_target_encoder()
         self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="1024-1024-1024", n_steps=n_steps)
 
-        self._init_target_encoder()
-    
-    def _init_target_encoder(self):
-        # Initializing target encoder parameters with the same values as the encoder
-        for param, target_param in zip(self.encoder.parameters(), self.target_encoder.parameters()):
-            target_param.data.copy_(param.data)
+        
+    def get_target_encoder(self):
+
+        if self.config.loss_type == 'byol':
+            target_encoder = copy.deepcopy(self.encoder)
+
+            for param in target_encoder.parameters():
+                param.requires_grad = False
+
+        elif self.config.loss_type == 'vicreg':
+            target_encoder = ResNetEncoder(enc_dim=self.repr_dim)
+
+        return target_encoder
+
+    # def _init_target_encoder(self):
+    #     # Initializing target encoder parameters with the same values as the encoder
+    #     for param, target_param in zip(self.encoder.parameters(), self.target_encoder.parameters()):
+    #         target_param.data.copy_(param.data)
 
     def update_target_encoder(self, momentum=0.99):
         # Update target encoder parameters with the encoder parameters using momentum
@@ -79,7 +93,9 @@ class JEPA(nn.Module):
         predicted_encodings.append(state_t.unsqueeze(1))
 
         if get_tgt_enc:
-            target_encoding = self.target_encoder(first_frame)
+
+            with torch.no_grad():
+                target_encoding = self.target_encoder(first_frame)
             target_encodings.append(target_encoding.unsqueeze(1))
 
         # Predicting the future feature representation at each timestep
@@ -89,7 +105,8 @@ class JEPA(nn.Module):
             predicted_encodings.append(state_t.unsqueeze(1))
 
             if get_tgt_enc:
-                target_encoding = self.target_encoder(obs[:, t, :, :, :])
+                with torch.no_grad():
+                    target_encoding = self.target_encoder(obs[:, t, :, :, :])
                 target_encodings.append(target_encoding.unsqueeze(1))
 
         # Stack the predicted feature representations for each timestep

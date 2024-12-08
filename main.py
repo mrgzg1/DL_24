@@ -53,10 +53,10 @@ def load_data(device, batch_size):
     return probe_train_ds, probe_val_ds
 
 
-def load_model():
+def load_model(device, config):
     """Load or initialize the model."""
     # TODO: Replace MockModel with your trained model
-    model = JEPA(device="cpu")
+    model = JEPA(device=device, config=config)
     return model
 
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         model_path = experiment_path + "checkpoints/"
         device = get_device()
         probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
-        model = load_model()
+        model = load_model(device, args)
         train_jepa(device, model, probe_train_ds, probe_val_ds, config=args, save_path=model_path)
 
     else:
@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
         device = get_device()
         probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
-        model = load_model()
+        model = load_model(device, args)
         
         model = load_model_weights(model, model_path, device)
         evaluate_model(device, model, probe_train_ds, probe_val_ds)
