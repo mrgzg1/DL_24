@@ -59,10 +59,7 @@ def parse_args():
     parser.add_argument('--std_coeff',             type=float,     default=1.0)
     parser.add_argument('--cov_coeff',             type=float,     default=1.0)
     parser.add_argument('--momentum',              type=float,     default=0.99)
-    parser.add_argument('--loss_type',             type=str,       default='vicreg')            # vicreg, byol
-
-
-
+    parser.add_argument('--loss_type',             type=str,       default='byol')            # vicreg, byol
 
     # training
     parser.add_argument('-r', '--run_id',          type=int,      default=1)

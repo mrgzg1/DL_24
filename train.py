@@ -62,7 +62,6 @@ class TrainJEPA():
                     elif self.config.loss_type == 'byol':
                         loss = self.byol_loss(pred_enc, tgt_enc)
 
-
                     # Backward pass 
                     loss.backward() 
                     # Update the optimizer
@@ -220,7 +219,7 @@ class TrainJEPA():
 
     def byol_loss(self, pred_enc, tgt_enc):
         """
-        Compute the BYOL loss between the predicted and target encodings
+        Compute the BYOL loss between the predicted and target encodings for each time step.
         
         Args:
             pred_enc: [B, T, D] - Output from predictor network
@@ -229,19 +228,28 @@ class TrainJEPA():
         Output:
             loss: float - BYOL loss value
         """
-        # Reshape the predicted and target encodings
         B, T, D = pred_enc.size()
-        pred_enc = pred_enc.view(B*T, D)
-        tgt_enc = tgt_enc.view(B*T, D)
+        total_loss = 0.0
 
-        # Normalize the representations
-        pred_enc = F.normalize(pred_enc, dim=-1, p=2)
-        tgt_enc = F.normalize(tgt_enc, dim=-1, p=2)
+        for t in range(T):
+            # Extract embeddings at time step t
+            pred_enc_t = pred_enc[:, t, :]  # [B, D]
+            tgt_enc_t = tgt_enc[:, t, :]    # [B, D]
 
-        
-        loss = -2 * (pred_enc * tgt_enc.detach()).sum(dim=-1).mean()
+            # Normalize the representations
+            pred_enc_t = F.normalize(pred_enc_t, dim=-1, p=2)  # [B, D]
+            tgt_enc_t = F.normalize(tgt_enc_t, dim=-1, p=2)    # [B, D]
 
-        return loss
+            # Compute BYOL loss for the current time step
+            loss_t = -2 * (pred_enc_t * tgt_enc_t.detach()).sum(dim=-1).mean()
+
+            # Accumulate loss
+            total_loss += loss_t
+
+        # Average loss over all time steps
+        total_loss = total_loss / T
+
+        return total_loss
 
     def save_model(self, path):
         path = os.path.join(path, "best_model.pth")
