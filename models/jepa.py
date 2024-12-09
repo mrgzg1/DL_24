@@ -49,14 +49,10 @@ class JEPA(nn.Module):
         
     def get_target_encoder(self):
 
-        if self.config.loss_type == 'byol':
-            target_encoder = copy.deepcopy(self.encoder)
+        target_encoder = copy.deepcopy(self.encoder)
 
-            for param in target_encoder.parameters():
-                param.requires_grad = False
-
-        elif self.config.loss_type == 'vicreg':
-            target_encoder = CNNBackbone(n_kernels=32, enc_dim=self.repr_dim)
+        for param in target_encoder.parameters():
+            param.requires_grad = False
 
         return target_encoder
 
@@ -83,7 +79,6 @@ class JEPA(nn.Module):
 
         """
 
-        batch_size, horizon_length, channels, height, width = obs.size() # [B, T, Ch, H, W]
         predicted_encodings = []
         target_encodings = []
 
@@ -99,7 +94,7 @@ class JEPA(nn.Module):
             target_encodings.append(target_encoding.unsqueeze(1))
 
         # Predicting the future feature representation at each timestep
-        for t in range(1, horizon_length):
+        for t in range(1, self.n_steps):
             action = actions[:, t-1, :] # Get the action at timestep t-1
             state_t = self.predictor(state_t, action) # Predict the future feature representation at timestep t
             predicted_encodings.append(state_t.unsqueeze(1))

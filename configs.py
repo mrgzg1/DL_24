@@ -55,11 +55,11 @@ def parse_args():
 
     # architecture
     parser.add_argument('-N', '--model_type',      type=str,       default='gru')               # mlp, gru, lstm, tcn
-    parser.add_argument('--sim_coeff',             type=float,     default=25.0)
-    parser.add_argument('--std_coeff',             type=float,     default=25.0)
+    parser.add_argument('--sim_coeff',             type=float,     default=1.0)
+    parser.add_argument('--std_coeff',             type=float,     default=1.0)
     parser.add_argument('--cov_coeff',             type=float,     default=1.0)
     parser.add_argument('--momentum',              type=float,     default=0.99)
-    parser.add_argument('--loss_type',             type=str,       default='byol')               # mlp, gru, lstm, tcn
+    parser.add_argument('--loss_type',             type=str,       default='vicreg')            # vicreg, byol
 
 
 
@@ -76,8 +76,8 @@ def parse_args():
 
     # Optimizer
     parser.add_argument('-l', '--learning_rate',   type=float,    default=0.0001)
-    parser.add_argument('--warmup_lr',             type=float,    default=1e-3)
-    parser.add_argument('--cosine_lr',             type=float,    default=1e-4)
+    parser.add_argument('--warmup_lr',             type=float,    default=2e-1)
+    parser.add_argument('--cosine_lr',             type=float,    default=2e-3)
     parser.add_argument('--warmup_steps',          type=int,      default=10000)
     parser.add_argument('--cosine_steps',          type=int,      default=30000)
     parser.add_argument('--gradient_clip_val',     type=float,    default=1.0)

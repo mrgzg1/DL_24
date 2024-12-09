@@ -12,7 +12,7 @@ from configs import parse_args, save_args, check_folder_paths, load_args
 
 
 
-TRAIN_JEPA = True
+TRAIN_JEPA = False
 
 def get_device():
     """Check for GPU availability."""
@@ -56,7 +56,6 @@ def load_data_probe(device, batch_size):
 def load_data_jepa(device, batch_size):
     
     data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
-    data_path = "/data/DL_24/data"
     train_ds = create_wall_dataloader(
         data_path=f"{data_path}/train",
         probing=False,
@@ -144,7 +143,7 @@ if __name__ == "__main__":
 
 
         device = get_device()
-        probe_train_ds, probe_val_ds = load_data(device, args.batch_size)
+        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
         model = load_model(device, args)
         
         model = load_model_weights(model, model_path, device)

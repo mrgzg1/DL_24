@@ -9,7 +9,7 @@ class ResNetEncoder(nn.Module):
 
         self.enc_dim = enc_dim
         # Modify the first convolution layer to accept 2 channels
-        self.resnet = resnet34(pretrained=False)
+        self.resnet = resnet18(pretrained=False)
         self.resnet.conv1 = nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
         # Modify the output layer to output enc_dim features
         self.resnet.fc = nn.Linear(512, enc_dim)
@@ -68,6 +68,16 @@ class ResidualLayer(nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
                 nn.BatchNorm2d(out_channels)
             )
+
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
     
     def forward(self, x):
         residual = x

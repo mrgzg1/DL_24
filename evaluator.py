@@ -38,7 +38,6 @@ default_config = ProbingConfig()
 
 
 def location_losses(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-
     assert pred.shape == target.shape
     mse = (pred - target).pow(2).mean(dim=0)
     return mse
@@ -113,10 +112,9 @@ class ProbingEvaluator:
             for batch in tqdm(dataset, desc="Probe prediction step"):
                 ################################################################################
                 # TODO: Forward pass through your model
-                obs = batch.states.to(self.device)
+                init_states = batch.states[:, 0:1].to(self.device)  # BS, 1, C, H, W
                 actions = batch.actions.to(self.device)
-
-                pred_encs = model(obs, actions, get_tgt_enc=False)
+                pred_encs = model(init_states, actions, get_tgt_enc=False)
                 pred_encs = pred_encs.transpose(0, 1)  # # BS, T, D --> T, BS, D
 
                 # Make sure pred_encs has shape (T, BS, D) at this point
@@ -130,7 +128,6 @@ class ProbingEvaluator:
                 losses_list = []
 
                 target = getattr(batch, "locations").cuda()
-                # target = getattr(batch, "locations").cpu()
                 target = self.normalizer.normalize_location(target)
 
                 if (
@@ -214,10 +211,9 @@ class ProbingEvaluator:
         for idx, batch in enumerate(tqdm(val_ds, desc="Eval probe pred")):
             ################################################################################
             # TODO: Forward pass through your model
-            obs = batch.states.to(self.device)
+            init_states = batch.states[:, 0:1].to(self.device)  # BS, 1, C, H, W
             actions = batch.actions.to(self.device)
-
-            pred_encs = model(obs, actions, get_tgt_enc=False)
+            pred_encs = model(init_states, actions, get_tgt_enc=False)
             # # BS, T, D --> T, BS, D
             pred_encs = pred_encs.transpose(0, 1)
 

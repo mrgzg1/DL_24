@@ -51,6 +51,10 @@ class TrainJEPA():
 
                     pred_enc, tgt_enc = self.model(obs, actions, get_tgt_enc=True)
 
+                    # pred_var = pred_enc.var(dim=0).mean().item()
+                    # tgt_var = tgt_enc.var(dim=0).mean().item()
+                    # print(f"Pred Variance: {pred_var}, Target Variance: {tgt_var}")
+
                     # Compute the loss using the energy distance
                     if self.config.loss_type == 'vicreg':
                         loss = self.vicreg_loss(pred_enc, tgt_enc)
@@ -65,7 +69,7 @@ class TrainJEPA():
                     optimizer.step()
 
                     # Update the target encoder
-                    self.model.update_target_encoder(self.config.momentum)
+                    self.model.update_target_encoder()
 
                     total_energy += loss.item()
 
@@ -91,10 +95,54 @@ class TrainJEPA():
         n, _ = matrix.shape
         return matrix.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
 
+    # def vicreg_loss(self, pred_enc, tgt_enc):
+    #     """
+    #     Compute the VicReg loss between the predicted and target encodings
+        
+    #     Args:
+    #         pred_enc: [B, T, D]
+    #         tgt_enc: [B, T, D]
+
+    #     Output:
+    #         loss: float
+    #     """
+
+    #     # Reshape the predicted and target encodings
+    #     B, T, D = pred_enc.size()
+    #     pred_enc = pred_enc.view(B*T, D)
+    #     tgt_enc = tgt_enc.view(B*T, D).detach()
+
+    #     # Normalize the representations
+    #     pred_enc = F.normalize(pred_enc, dim=-1, p=2)
+    #     tgt_enc = F.normalize(tgt_enc, dim=-1,   p=2)
+
+    #     # Compute invarience loss
+    #     repr_loss = F.mse_loss(pred_enc, tgt_enc)
+
+    #     # Normalize by centering 
+    #     pred_enc = pred_enc - pred_enc.mean(dim=0)
+    #     tgt_enc = tgt_enc - tgt_enc.mean(dim=0)
+
+    #     # Varience Regularization 
+    #     std_pred = torch.sqrt(pred_enc.var(dim=0) + 1e-4)
+    #     std_tgt =  torch.sqrt(tgt_enc.var(dim=0) + 1e-4) 
+    #     std_loss = torch.mean(F.relu(1 - std_pred)) / 2 + torch.mean(F.relu(1 - std_tgt)) / 2
+
+    #     # Covariance Regularization
+    #     cov_pred = (pred_enc.t() @ pred_enc) / (B*T - 1) # D x D
+    #     cov_tgt  = (tgt_enc.t() @ tgt_enc)  / (B*T - 1)  # D x D
+
+    #     cov_loss = self._off_diagonal(cov_pred).pow(2).sum().div(D) + \
+    #                self._off_diagonal(cov_tgt).pow(2).sum().div(D)
+
+    #     loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
+
+    #     return loss
+
     def vicreg_loss(self, pred_enc, tgt_enc):
         """
-        Compute the VicReg loss between the predicted and target encodings
-        
+        Compute the VicReg loss for each time step and accumulate over the temporal dimension.
+
         Args:
             pred_enc: [B, T, D]
             tgt_enc: [B, T, D]
@@ -103,31 +151,56 @@ class TrainJEPA():
             loss: float
         """
 
-        # Reshape the predicted and target encodings
+        # Retrieve dimensions
         B, T, D = pred_enc.size()
-        pred_enc = pred_enc.view(B*T, D)
-        tgt_enc = tgt_enc.view(B*T, D)
+        
+        # Initialize loss accumulators
+        repr_loss_accum = 0
+        std_loss_accum = 0
+        cov_loss_accum = 0
 
-        # Compute invarience loss
-        repr_loss = F.mse_loss(pred_enc, tgt_enc)
+        # Iterate over time steps
+        for t in range(T):
+            pred_step = pred_enc[:, t, :]  # [B, D]
+            tgt_step = tgt_enc[:, t, :].detach()  # [B, D], detach target for no gradients
 
-        # Normalize by centering 
-        pred_enc = pred_enc - pred_enc.mean(dim=0)
-        tgt_enc = tgt_enc - tgt_enc.mean(dim=0)
+            # Normalize representations
+            # pred_step = F.normalize(pred_step, dim=-1, p=2)
+            # tgt_step = F.normalize(tgt_step, dim=-1, p=2)
 
-        # Varience Regularization 
-        std_pred = torch.sqrt(pred_enc.var(dim=0) + 1e-4)
-        std_tgt =  torch.sqrt(tgt_enc.var(dim=0) + 1e-4) 
-        std_loss = torch.mean(F.relu(1 - std_pred)) / 2 + torch.mean(F.relu(1 - std_tgt)) / 2
+            # Invariance loss
+            repr_loss = F.mse_loss(pred_step, tgt_step)
 
-        # Covariance Regularization
-        cov_pred = (pred_enc.t() @ pred_enc) / (B*T - 1) # D x D
-        cov_tgt  = (tgt_enc.t() @ tgt_enc)  / (B*T - 1)  # D x D
+            # Center the embeddings
+            pred_step = pred_step - pred_step.mean(dim=0)
+            tgt_step = tgt_step - tgt_step.mean(dim=0)
 
-        cov_loss = self._off_diagonal(cov_pred).pow(2).sum().div(D) + \
-                   self._off_diagonal(cov_tgt).pow(2).sum().div(D)
+            # Variance regularization
+            std_pred = torch.sqrt(pred_step.var(dim=0) + 1e-4)
+            std_tgt = torch.sqrt(tgt_step.var(dim=0) + 1e-4)
+            std_loss = torch.mean(F.relu(1 - std_pred)) / 2 + torch.mean(F.relu(1 - std_tgt)) / 2
 
-        loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
+            # Covariance regularization
+            cov_pred = (pred_step.t() @ pred_step) / (B - 1)  # D x D
+            cov_tgt = (tgt_step.t() @ tgt_step) / (B - 1)  # D x D
+
+            cov_loss = self._off_diagonal(cov_pred).pow(2).sum().div(D) + \
+                    self._off_diagonal(cov_tgt).pow(2).sum().div(D)
+
+            # Accumulate losses
+            repr_loss_accum += repr_loss
+            std_loss_accum += std_loss
+            cov_loss_accum += cov_loss
+
+        # Average losses across all time steps
+        repr_loss_accum /= T
+        std_loss_accum /= T
+        cov_loss_accum /= T
+
+        # Final loss with coefficients
+        loss = (self.config.sim_coeff * repr_loss_accum +
+                self.config.std_coeff * std_loss_accum +
+                self.config.cov_coeff * cov_loss_accum)
 
         return loss
 
@@ -136,7 +209,7 @@ class TrainJEPA():
         """Exponential moving average update for target network parameters"""
         if old is None:
             return copy.deepcopy(new)
-        return old * self.momentum + (1 - self.momentum) * new
+        return old * self.config.momentum + (1 - self.config.momentum) * new
 
     def update_target_network(self):
         """Update target network parameters using exponential moving average"""
