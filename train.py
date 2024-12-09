@@ -37,6 +37,7 @@ class TrainJEPA():
                     )
 
         best_train_loss = float('inf')
+        step = 0
 
         for epoch in range(self.config.epochs):
             
@@ -75,6 +76,10 @@ class TrainJEPA():
                     # Update the progress bar
                     pbar.set_postfix({'Loss': f'{loss.item():.6f}'})
                     pbar.update(1)
+
+                    # Update the learning rate
+                    lr = scheduler.adjust_learning_rate(step)
+                    step += 1
 
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
@@ -191,7 +196,7 @@ class TrainJEPA():
             std_loss_accum += std_loss
             cov_loss_accum += cov_loss
 
-        # Average losses across all time steps
+        # # Average losses across all time steps
         repr_loss_accum /= T
         std_loss_accum /= T
         cov_loss_accum /= T
@@ -204,18 +209,6 @@ class TrainJEPA():
         return loss
 
     ######### BYOL Loss #########
-    def _update_moving_average(self, old, new):
-        """Exponential moving average update for target network parameters"""
-        if old is None:
-            return copy.deepcopy(new)
-        return old * self.config.momentum + (1 - self.config.momentum) * new
-
-    def update_target_network(self):
-        """Update target network parameters using exponential moving average"""
-        for online_params, target_params in zip(self.model.parameters(), 
-                                              self.target_network.parameters()):
-            old_weight, up_weight = target_params.data, online_params.data
-            target_params.data = self._update_moving_average(old_weight, up_weight)
 
     def byol_loss(self, pred_enc, tgt_enc):
         """

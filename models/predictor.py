@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from typing import List
+from torch.nn import functional as F
+
 
 """
 Create a simple LSTM network for predicting future feature representations
@@ -49,6 +51,9 @@ class Predictor(nn.Module):
         x = torch.cat([state, action], dim=1)
 
         x = self.mlp(x)
+
+        # Normalize the output
+        # x = F.normalize(x, dim=-1)
 
         return x
 

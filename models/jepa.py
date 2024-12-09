@@ -31,7 +31,7 @@ import numpy as np
 import copy
 from typing import List
 from torchvision.models import resnet18
-from .encoder import ResNetEncoder, CNNBackbone
+from .encoder import Encoder, CNNBackbone
 from .predictor import Predictor
 
 class JEPA(nn.Module):
@@ -42,9 +42,26 @@ class JEPA(nn.Module):
         self.n_steps = n_steps
         self.repr_dim = 256
         self.config = config
-        self.encoder = CNNBackbone(n_kernels=32, repr_dim=enc_dim)
+        # self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim)
+        self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim, config=config)
         self.target_encoder = self.get_target_encoder()
-        self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="1024-1024-1024", n_steps=n_steps)
+        self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, arch="1024-512-256", n_steps=n_steps)
+
+        self.get_num_params()
+
+    # Print each model no. of parameter
+
+    def get_num_params(self):
+
+        num_encoder_params = sum(p.numel() for p in self.encoder.parameters())
+        num_target_encoder_params = sum(p.numel() for p in self.target_encoder.parameters())
+        num_predictor_params = sum(p.numel() for p in self.predictor.parameters())
+
+        # Print in millions
+        print(f"Number of parameters in encoder: {num_encoder_params/1e6}M")
+        print(f"Number of parameters in target encoder: {num_target_encoder_params/1e6}M")
+        print(f"Number of parameters in predictor: {num_predictor_params/1e6}M")
+
 
         
     def get_target_encoder(self):
@@ -63,8 +80,10 @@ class JEPA(nn.Module):
 
     def update_target_encoder(self, momentum=0.99):
         # Update target encoder parameters with the encoder parameters using momentum
-        for param, target_param in zip(self.encoder.parameters(), self.target_encoder.parameters()):
-            target_param.data = momentum * target_param.data + (1 - momentum) * param.data
+
+        with torch.no_grad():
+            for param, target_param in zip(self.encoder.parameters(), self.target_encoder.parameters()):
+                target_param.data = momentum * target_param.data + (1 - momentum) * param.data
 
     def forward(self, obs, actions, get_tgt_enc=False):
         """
@@ -98,11 +117,17 @@ class JEPA(nn.Module):
             action = actions[:, t-1, :] # Get the action at timestep t-1
 
             state_t = self.predictor(state_t, action) # Predict the future feature representation at timestep t
+
+            # Print varience across embeddings for debugging
+            # print(state_t.var(dim=1).mean())
+
             predicted_encodings.append(state_t.unsqueeze(1))
 
             if get_tgt_enc:
                 with torch.no_grad():
                     target_encoding = self.target_encoder(obs[:, t, :, :, :])
+
+                    # Print max and min values of  obs 
                 target_encodings.append(target_encoding.unsqueeze(1))
 
         # Stack the predicted feature representations for each timestep
