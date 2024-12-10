@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from tqdm.auto import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
+import wandb
 
 from schedulers import Scheduler, LRSchedule
 from configs import ConfigBase
@@ -77,6 +78,12 @@ class TrainJEPA():
                     pbar.set_postfix({'Loss': f'{loss.item():.6f}'})
                     pbar.update(1)
 
+                    # Log metrics to wandb
+                    wandb.log({
+                        'batch_loss': loss.item(),
+                        'learning_rate': lr
+                    }, step=step)
+
                     # Update the learning rate
                     lr = scheduler.adjust_learning_rate(step)
                     step += 1
@@ -84,9 +91,17 @@ class TrainJEPA():
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
 
+            # Log epoch metrics
+            wandb.log({
+                'epoch': epoch,
+                'avg_energy': avg_energy,
+                'best_train_loss': best_train_loss
+            }, step=step)
+
             if avg_energy < best_train_loss:
                 best_train_loss = avg_energy
                 self.save_model(self.save_path)
+                wandb.run.summary['best_train_loss'] = best_train_loss
 
             if epoch % 5 == 0:
                 self.save_model(self.save_path, int(epoch/5))
@@ -209,6 +224,14 @@ class TrainJEPA():
                 self.config.std_coeff * std_loss_accum +
                 self.config.cov_coeff * cov_loss_accum)
 
+        # Log VicReg components
+        wandb.log({
+            'vicreg/repr_loss': repr_loss_accum.item(),
+            'vicreg/std_loss': std_loss_accum.item(), 
+            'vicreg/cov_loss': cov_loss_accum.item(),
+            'vicreg/total_loss': loss.item()
+        })
+
         return loss
 
     ######### BYOL Loss #########
@@ -245,12 +268,29 @@ class TrainJEPA():
         # Average loss over all time steps
         total_loss = total_loss / T
 
+        # Log BYOL loss
+        wandb.log({
+            'byol/total_loss': total_loss.item()
+        })
+
         return total_loss
 
     def save_model(self, path, i=None):
         if i is not None:
             save_path = os.path.join(path, f"best_model_{i}.pth")
+            artifact_name = f"model-checkpoint-{i}"
         else:
             save_path = os.path.join(path, "best_model.pth")
+            artifact_name = "best-model"
             
+        # Save model locally
         torch.save(self.model.state_dict(), save_path)
+        
+        # Log model artifact to wandb
+        artifact = wandb.Artifact(
+            artifact_name,
+            type="model",
+            description=f"Model checkpoint at iteration {i if i is not None else 'best'}"
+        )
+        artifact.add_file(save_path)
+        wandb.log_artifact(artifact)
