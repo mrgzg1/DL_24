@@ -113,8 +113,8 @@ if __name__ == "__main__":
     )
 
     folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
-    resources_path = folder_path + "resources/"
-    experiment_path = resources_path + "experiments/" + args.experiment_name
+    resources_path = os.path.join(folder_path, "resources")
+    experiment_path = os.path.join(resources_path, "experiments", args.experiment_name)
     device = get_device(args)
 
     # train if eval isn't set
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         # save arguments
         save_args(args, os.path.join(experiment_path, "args.txt"))
 
-        model_path = experiment_path + "checkpoints/"
+        model_path = os.path.join(experiment_path, "checkpoints")
         train_ds = load_data_jepa(device, args.batch_size)
         model = load_model(device, args)
         train_jepa(device, model, train_ds, config=args, save_path=model_path)
