@@ -39,6 +39,7 @@ class TrainJEPA():
 
         best_train_loss = float('inf')
         step = 0
+        lr = self.config.warmup_lr  # Initialize learning rate
 
         for epoch in range(self.config.epochs):
             
@@ -59,10 +60,10 @@ class TrainJEPA():
 
                     # Compute the loss using the energy distance
                     if self.config.loss_type == 'vicreg':
-                        loss = self.vicreg_loss(pred_enc, tgt_enc)
+                        loss = self.vicreg_loss(pred_enc, tgt_enc, step)
 
                     elif self.config.loss_type == 'byol':
-                        loss = self.byol_loss(pred_enc, tgt_enc)
+                        loss = self.byol_loss(pred_enc, tgt_enc, step)
 
                     # Backward pass 
                     loss.backward() 
@@ -161,13 +162,14 @@ class TrainJEPA():
 
     #     return loss
 
-    def vicreg_loss(self, pred_enc, tgt_enc):
+    def vicreg_loss(self, pred_enc, tgt_enc, step):
         """
         Compute the VicReg loss for each time step and accumulate over the temporal dimension.
 
         Args:
             pred_enc: [B, T, D]
             tgt_enc: [B, T, D]
+            step: Current training step for logging
 
         Output:
             loss: float
@@ -214,7 +216,7 @@ class TrainJEPA():
             std_loss_accum += std_loss
             cov_loss_accum += cov_loss
 
-        # # Average losses across all time steps
+        # Average losses across all time steps
         repr_loss_accum /= T
         std_loss_accum /= T
         cov_loss_accum /= T
@@ -230,19 +232,20 @@ class TrainJEPA():
             'vicreg/std_loss': std_loss_accum.item(), 
             'vicreg/cov_loss': cov_loss_accum.item(),
             'vicreg/total_loss': loss.item()
-        })
+        }, step=step)
 
         return loss
 
     ######### BYOL Loss #########
 
-    def byol_loss(self, pred_enc, tgt_enc):
+    def byol_loss(self, pred_enc, tgt_enc, step):
         """
         Compute the BYOL loss between the predicted and target encodings for each time step.
         
         Args:
             pred_enc: [B, T, D] - Output from predictor network
             tgt_enc: [B, T, D] - Output from target network (detached)
+            step: Current training step for logging
 
         Output:
             loss: float - BYOL loss value
@@ -271,7 +274,7 @@ class TrainJEPA():
         # Log BYOL loss
         wandb.log({
             'byol/total_loss': total_loss.item()
-        })
+        }, step=step)
 
         return total_loss
 
