@@ -64,10 +64,10 @@ def parse_args():
     parser.add_argument('--norm_features',         type=bool,      default=False)
 
     ## Transformer Encoder specific arguments
-    parser.add_argument('--num_layers',            type=int,       default=2)
+    parser.add_argument('--num_layers',            type=int,       default=6)
     parser.add_argument('--num_heads',             type=int,       default=8)
-    parser.add_argument('--d_model',               type=int,       default=64)
-    parser.add_argument('--dim_feedforward',       type=int,       default=128)
+    parser.add_argument('--d_model',               type=int,       default=256)
+    parser.add_argument('--dim_feedforward',       type=int,       default=512)
     parser.add_argument('--dropout',               type=float,     default=0.1)
     
     # training
@@ -81,9 +81,9 @@ def parse_args():
     parser.add_argument('--seed',                  type=int,      default=10)
 
     # Optimizer
-    parser.add_argument('-l', '--learning_rate',   type=float,    default=1e-3)
+    parser.add_argument('-l', '--learning_rate',   type=float,    default=1e-4)
     parser.add_argument('--warmup_lr',             type=float,    default=1e-2)
-    parser.add_argument('--weight_decay',          type=float,    default=1e-4)
+    parser.add_argument('--weight_decay',          type=float,    default=0.05)
     parser.add_argument('--adam_beta1',            type=float,    default=0.9)
     parser.add_argument('--adam_beta2',            type=float,    default=0.999)
     parser.add_argument('--adam_eps',              type=float,    default=1e-08)
