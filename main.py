@@ -24,8 +24,7 @@ def get_device(args):
 
 
 def load_data_probe(device, batch_size):
-    data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
-    data_path = "/data/DL_24/data"
+    data_path = CONFIG.data_path
     probe_train_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_normal/train",
         probing=True,
@@ -56,9 +55,7 @@ def load_data_probe(device, batch_size):
 
 
 def load_data_jepa(device, batch_size):
-    
-    data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
-    data_path = "/data/DL_24/data"
+    data_path = CONFIG.data_path
 
     train_ds = create_wall_dataloader(
         data_path=f"{data_path}/train",
@@ -132,26 +129,33 @@ if __name__ == "__main__":
         train_ds = load_data_jepa(device, args.batch_size)
         model = load_model(device, args)
         train_jepa(device, model, train_ds, config=args, save_path=model_path)
-
     # evaluate the model at the end of every run anyways
     if not os.path.exists(experiment_path):
         print(f"Error: Experiment directory {experiment_path} does not exist")
         sys.exit(1)
         
-    checkpoint_files = glob.glob(experiment_path + "checkpoints/*.pth", recursive=True)
+    # Fix path construction to ensure proper joining
+    checkpoints_dir = os.path.join(experiment_path, "checkpoints")
+    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
+    
     if not checkpoint_files:
-        print(f"Error: No checkpoint files found in {experiment_path}/checkpoints/")
+        print(f"Error: No checkpoint files found in {checkpoints_dir}")
         sys.exit(1)
         
-    print(experiment_path)
+    print(f"Experiment path: {experiment_path}")
     print("Found checkpoints:", checkpoint_files)
 
-    device = get_device()
+    # Use the same device as specified in args
+    device = get_device(args)
     probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
     model = load_model(device, args)
 
     # Evaluate each checkpoint
     for checkpoint_path in checkpoint_files:
         print("\nTesting JEPA model:", checkpoint_path)
-        model = load_model_weights(model, checkpoint_path, device)
-        evaluate_model(device, model, probe_train_ds, probe_val_ds)
+        try:
+            model = load_model_weights(model, checkpoint_path, device)
+            evaluate_model(device, model, probe_train_ds, probe_val_ds)
+        except Exception as e:
+            print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
+            continue
