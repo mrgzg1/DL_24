@@ -17,7 +17,8 @@ Input:
 
 Output:
 - pred_encs: [B, T, enc_dim]
-"""
+"""        
+
 def build_mlp(layers_dims: List[int]):
     layers = []
     for i in range(len(layers_dims) - 2):
@@ -28,11 +29,12 @@ def build_mlp(layers_dims: List[int]):
     return nn.Sequential(*layers)
 
 class Predictor(nn.Module):
-    def __init__(self, enc_dim, action_dim, arch, n_steps=17):
+    def __init__(self, enc_dim, action_dim, arch, n_steps=17, norm_features=False):
         super(Predictor, self).__init__()
         self.enc_dim = enc_dim
         self.action_dim = action_dim
         self.n_steps = n_steps
+        self.norm_features = norm_features
 
         arch_list = list(map(int, arch.split("-")))
 
@@ -53,19 +55,7 @@ class Predictor(nn.Module):
         x = self.mlp(x)
 
         # Normalize the output
-        # x = F.normalize(x, dim=-1)
+        if self.norm_features:
+            x = F.normalize(x, dim=-1)
 
         return x
-
-        
-
-
- 
-
-        
-
-
-    
-
-
-

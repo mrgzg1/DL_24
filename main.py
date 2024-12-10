@@ -12,8 +12,7 @@ from configs import parse_args, save_args, check_folder_paths, load_args
 
 
 
-TRAIN_JEPA = False
-
+TRAIN_JEPA = True
 
 def get_device():
     """Check for GPU availability."""

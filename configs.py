@@ -57,11 +57,11 @@ def parse_args():
     parser.add_argument('--predictor_type',        type=str,       default='mlp')               # mlp, gru, lstm, tcn
     parser.add_argument('--encoder_type',          type=str,       default='cnn')               # cnn, vit
     parser.add_argument('--sim_coeff',             type=float,     default=1.0)
-    parser.add_argument('--std_coeff',             type=float,     default=2.0)
-    parser.add_argument('--cov_coeff',             type=float,     default=2.0)
+    parser.add_argument('--std_coeff',             type=float,     default=1.0)
+    parser.add_argument('--cov_coeff',             type=float,     default=1.0)
     parser.add_argument('--momentum',              type=float,     default=0.99)
     parser.add_argument('--loss_type',             type=str,       default='vicreg')            # vicreg, byol
-    parser.add_argument('--norm_features',         type=bool,      default=True)
+    parser.add_argument('--norm_features',         type=bool,      default=False)
 
     ## Transformer Encoder specific arguments
     parser.add_argument('--num_layers',            type=int,       default=2)
@@ -74,7 +74,7 @@ def parse_args():
     parser.add_argument('-r', '--run_id',          type=int,      default=1)
     parser.add_argument('-d', '--gpu_id',          type=int,      default=0)
     parser.add_argument('--num_devices',           type=int,      default=1)
-    parser.add_argument('-e', '--epochs',          type=int,      default=30)
+    parser.add_argument('-e', '--epochs',          type=int,      default=20)
     parser.add_argument('-b', '--batch_size',      type=int,      default=128)
     parser.add_argument('-s', '--shuffle',         type=bool,     default=False)
     parser.add_argument('-n', '--num_workers',     type=int,      default=4)
@@ -83,8 +83,6 @@ def parse_args():
     # Optimizer
     parser.add_argument('-l', '--learning_rate',   type=float,    default=1e-3)
     parser.add_argument('--warmup_lr',             type=float,    default=1e-2)
-    parser.add_argument('--warmup_steps',          type=int,      default=10000)
-    parser.add_argument('--gradient_clip_val',     type=float,    default=1.0)
     parser.add_argument('--weight_decay',          type=float,    default=1e-4)
     parser.add_argument('--adam_beta1',            type=float,    default=0.9)
     parser.add_argument('--adam_beta2',            type=float,    default=0.999)
