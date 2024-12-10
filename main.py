@@ -13,17 +13,19 @@ from configs import parse_args, save_args, check_folder_paths, load_args
 
 
 TRAIN_JEPA = True
+CONFIG = None # used as global to save args
 
-def get_device():
-    """Check for GPU availability."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Using device:", device)
+def get_device(args):
+    """Set CUDA device based on gpu_id and return device."""
+    torch.cuda.set_device(args.gpu_id)
+    device = torch.device(f"cuda:{args.gpu_id}")
+    print(f"Using device: cuda:{args.gpu_id}")
     return device
 
 
 def load_data_probe(device, batch_size):
     data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
-
+    data_path = "/data/DL_24/data"
     probe_train_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_normal/train",
         probing=True,
@@ -56,6 +58,8 @@ def load_data_probe(device, batch_size):
 def load_data_jepa(device, batch_size):
     
     data_path = "/home/pratyaksh/arpl/workspaces/ws_dynamics/jepa_2d_simulation/data/DL24FA"
+    data_path = "/data/DL_24/data"
+
     train_ds = create_wall_dataloader(
         data_path=f"{data_path}/train",
         probing=False,
@@ -69,7 +73,6 @@ def load_data_jepa(device, batch_size):
 
 def load_model(device, config):
     """Load or initialize the model."""
-    # TODO: Replace MockModel with your trained model
     model = JEPA(device=device, config=config)
     return model
 
@@ -105,46 +108,50 @@ def load_model_weights(model, path, device):
     return model
 
 if __name__ == "__main__":
+    args = parse_args()
+    CONFIG = args
+    folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
+    resources_path = folder_path + "resources/"
+    experiment_path = resources_path + "experiments/" + args.experiment_name
+    device = get_device(args)
 
-    if TRAIN_JEPA:
-
-        # parse arguments
-        args = parse_args()
-
-        # Set global paths
-        folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
-        resources_path = folder_path + "resources/"
-        experiment_path = resources_path + "experiments/" + time.strftime("%Y%m%d-%H%M%S") + "_" + str(args.run_id) + "/"
-
+    # train if eval isn't set
+    if not args.eval:
+        # Check if experiment directory already exists
+        if os.path.exists(experiment_path):
+            response = input(f"Warning: Experiment directory {experiment_path} already exists. Continue and overwrite? [y/N] ")
+            if response.lower() != 'y':
+                print("Aborting...")
+                sys.exit(0)
+                
         check_folder_paths([os.path.join(experiment_path, "checkpoints")])
         # save arguments
         save_args(args, os.path.join(experiment_path, "args.txt"))
 
         model_path = experiment_path + "checkpoints/"
-        device = get_device()
         train_ds = load_data_jepa(device, args.batch_size)
         model = load_model(device, args)
         train_jepa(device, model, train_ds, config=args, save_path=model_path)
 
-    else:
+    # evaluate the model at the end of every run anyways
+    if not os.path.exists(experiment_path):
+        print(f"Error: Experiment directory {experiment_path} does not exist")
+        sys.exit(1)
         
-        # parse arguments
-        args = parse_args()
-
-        folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
-        resources_path = folder_path + "resources/"
-
-        experiment_path = max(glob.glob(resources_path + "experiments/*/"), key=os.path.getctime) 
-        model_path = max(glob.glob(experiment_path + "checkpoints/*.pth", recursive=True), key=os.path.getctime)
-
-        print(experiment_path)
-        print("Testing JEPA model:", model_path)
-        args = load_args(experiment_path + "args.txt")
-
-
-        device = get_device()
-        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
-        model = load_model(device, args)
+    checkpoint_files = glob.glob(experiment_path + "checkpoints/*.pth", recursive=True)
+    if not checkpoint_files:
+        print(f"Error: No checkpoint files found in {experiment_path}/checkpoints/")
+        sys.exit(1)
         
-        model = load_model_weights(model, model_path, device)
+    print(experiment_path)
+    print("Found checkpoints:", checkpoint_files)
+
+    device = get_device()
+    probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+    model = load_model(device, args)
+
+    # Evaluate each checkpoint
+    for checkpoint_path in checkpoint_files:
+        print("\nTesting JEPA model:", checkpoint_path)
+        model = load_model_weights(model, checkpoint_path, device)
         evaluate_model(device, model, probe_train_ds, probe_val_ds)

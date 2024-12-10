@@ -88,6 +88,13 @@ def parse_args():
     parser.add_argument('--adam_beta2',            type=float,    default=0.999)
     parser.add_argument('--adam_eps',              type=float,    default=1e-08)
 
+
+    # Experiments
+    parser.add_argument('--data_path',             type=str,      default='/scratch/DL24FA')
+    parser.add_argument('--experiment_name',        type=str,      default=None, required=True)
+    parser.add_argument('--eval',                  action='store_true')
+
+    
     args = parser.parse_args()
     for arg in vars(args):
         value = getattr(args, arg)
