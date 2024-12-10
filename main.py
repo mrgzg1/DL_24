@@ -108,7 +108,7 @@ if __name__ == "__main__":
     # Initialize wandb
     wandb.init(
         project="wall_jepa", 
-        notes=args.experiment_name,
+        name=args.experiment_name,
         config=args
     )
 
