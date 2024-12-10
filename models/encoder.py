@@ -3,6 +3,7 @@ from torch import nn
 from torchvision.models import resnet18, resnet34, resnet50
 from torch.nn import functional as F
 import math
+import numpy as np
 
 
 
@@ -310,49 +311,85 @@ class ViTBackbone(nn.Module):
         # Learnable Class Token
         self.class_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim)) 
       
-        # Learnable Position Embeddings 
-        self.position_encoding = nn.Parameter(torch.empty(1, n_patches + 1, self.embed_dim))
-        nn.init.trunc_normal_(self.position_encoding, std=0.02)
+        # Add layer norm before transformer blocks
+        self.norm = nn.LayerNorm(self.embed_dim)
+        
+        # Improved position encoding initialization
+        self.position_encoding = nn.Parameter(torch.zeros(1, n_patches + 1, self.embed_dim))
+        self._init_weights()
         
         self.transformer_blocks = nn.ModuleList([
             TransformerBlock(self.embed_dim, self.num_heads, self.mlp_dim, self.dropout)
             for _ in range(self.num_layers)
         ])
 
+        # Modified final layers
         self.FC = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(in_features=self.embed_dim*(n_patches+1), out_features=self.embed_dim*2, bias=True),
-            nn.BatchNorm1d(self.embed_dim*2),
-            nn.ReLU(),
-            nn.Linear(in_features=self.embed_dim*2, out_features=self.embed_dim, bias=True)
+            nn.LayerNorm(self.embed_dim),
+            nn.Linear(self.embed_dim, self.embed_dim*2),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(self.embed_dim*2, self.embed_dim)
         )
 
+    def _init_weights(self):
+        # Initialize position encodings
+        position_embeddings = get_2d_sincos_pos_embed(
+            self.position_encoding.shape[-1],
+            int(np.sqrt(self.position_encoding.shape[1]-1)), 
+            cls_token=True
+        )
+        self.position_encoding.data.copy_(torch.from_numpy(position_embeddings).float().unsqueeze(0))
+        
+        # Initialize patch embedding
+        w = self.patch_embedding.conv_proj.weight.data
+        nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
 
     def forward(self, x):
-
         bs = x.shape[0]
         x = self.patch_embedding(x)
-
-        # Expan class tokens along batch dimension
+        
+        # Add class token
         class_token = self.class_token.expand(bs, -1, -1)
-    
-
-        # Concatenat class token to each embedding
         x = torch.cat((class_token, x), dim=1)
-
-        # Add positional encoding
-        x += self.position_encoding
-
-
+        
+        # Add position encoding
+        x = x + self.position_encoding
+        
+        # Apply initial normalization
+        x = self.norm(x)
+        
+        # Pass through transformer blocks
         for block in self.transformer_blocks:
             x = block(x)
-
+            
+        # Use only the class token for final representation
+        x = x[:, 0]
+        
+        # Final FC layers
         x = self.FC(x)
-
+        
         if self.norm_features:
             x = F.normalize(x, dim=-1)
-    
+        
         return x
+
+def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
+    """
+    grid_size: int of the grid height and width
+    return:
+    pos_embed: [grid_size*grid_size, embed_dim] or [1+grid_size*grid_size, embed_dim] (w/ or w/o cls_token)
+    """
+    grid_h = np.arange(grid_size, dtype=np.float32)
+    grid_w = np.arange(grid_size, dtype=np.float32)
+    grid = np.meshgrid(grid_w, grid_h)  # here w goes first
+    grid = np.stack(grid, axis=0)
+
+    grid = grid.reshape([2, 1, grid_size, grid_size])
+    pos_embed = get_2d_sincos_pos_embed_from_grid(embed_dim, grid)
+    if cls_token:
+        pos_embed = np.concatenate([np.zeros([1, embed_dim]), pos_embed], axis=0)
+    return pos_embed
 
 
 
