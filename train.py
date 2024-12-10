@@ -88,6 +88,9 @@ class TrainJEPA():
                 best_train_loss = avg_energy
                 self.save_model(self.save_path)
 
+            if epoch % 5 == 0:
+                self.save_model(self.save_path, int(epoch/5))
+
 
 
         return self.model   
@@ -244,6 +247,10 @@ class TrainJEPA():
 
         return total_loss
 
-    def save_model(self, path):
-        path = os.path.join(path, "best_model.pth")
-        torch.save(self.model.state_dict(), path)
+    def save_model(self, path, i=None):
+        if i is not None:
+            save_path = os.path.join(path, f"best_model_{i}.pth")
+        else:
+            save_path = os.path.join(path, "best_model.pth")
+            
+        torch.save(self.model.state_dict(), save_path)
