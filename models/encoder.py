@@ -219,45 +219,6 @@ class PatchEmbedding(nn.Module):
       x = x.permute(0, 2, 1) # (bs, embed_size, n_patches) --> (bs, n_patches, embed_size)
       return x
 
-class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, embed_dim, num_heads, dropout):
-      super().__init__()
-      
-      self.embed_dim = embed_dim
-      self.num_heads = num_heads
-      self.head_dim = embed_dim // num_heads
-      self.dropout = dropout
-
-      # Create copies of input for each q, k, v weights
-      self.qkv = nn.Linear(embed_dim, embed_dim * 3) 
-      self.q_norm = nn.LayerNorm(self.head_dim)
-      self.k_norm = nn.LayerNorm(self.head_dim)
-
-      self.projection = nn.Linear(self.embed_dim, self.embed_dim)
-      self.projection_dropout = nn.Dropout(self.dropout)
-      
-
-
-    def forward(self, x):
-      bs, n_patches, embed_size = x.shape
-
-      # Copies input embedding 3 times for q, k and v --> (Concat, bs, num_heads, n_patches, head_dim)
-      qkv = self.qkv(x).reshape(bs, n_patches, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
-      # 3 x copies (bs, num_heads, n_patches, head_dim)
-      q, k, v = qkv.unbind(0)
-
-      q, k = self.q_norm(q), self.k_norm(k)
-
-      # Scaled Dot Product Attn (QK^T) / sqrt(d)
-      attn = q @ k.transpose(-2, -1) * math.sqrt(self.head_dim)**-1
-      attn = F.softmax(attn, dim=-1)
-
-      x = attn @ v
-      x = x.transpose(1, 2).reshape(bs, n_patches, embed_size)
-      x = self.projection(x)
-      x = self.projection_dropout(x)
-      return x
-    
 class TransformerBlock(nn.Module):
     def __init__(self, embed_dim, num_heads, mlp_dim, dropout):
         super().__init__()
@@ -269,7 +230,12 @@ class TransformerBlock(nn.Module):
         self.layer_norm_1 = nn.LayerNorm(self.embed_dim)
         self.layer_norm_2 = nn.LayerNorm(self.embed_dim)
         
-        self.attention = MultiHeadSelfAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
+        self.attention = nn.MultiheadAttention(
+            embed_dim=self.embed_dim,
+            num_heads=self.num_heads,
+            dropout=self.dropout,
+            batch_first=True
+        )
 
         self.ffn = nn.Sequential(
             nn.Linear(self.embed_dim, mlp_dim),
@@ -280,15 +246,14 @@ class TransformerBlock(nn.Module):
         )
 
     def forward(self, x):
-        residual_1 = x
-        x = self.attention(x)
-        x = self.layer_norm_1(x) + residual_1
+        # Pre-LN transformer block
+        x_norm = self.layer_norm_1(x)
+        x = x + self.attention(x_norm, x_norm, x_norm)[0]
 
-        residual_2 = x
-        x = self.ffn(x)
-        x = self.layer_norm_2(x) + residual_2
+        x_norm = self.layer_norm_2(x)
+        x = x + self.ffn(x_norm)
 
-        return x  
+        return x
     
 class ViTBackbone(nn.Module):
     def __init__(self, image_size, patch_size, in_channels, embed_dim, 
