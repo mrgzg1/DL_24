@@ -1,17 +1,45 @@
-# example base we run with:
-# python main.py --experiment_name text_exp --data_path /data/DL_24/data --gpu_id 0 -b 512
+#!/bin/bash
 
+# Ensure PROJ_NAME and SWEEP_ID are set
+if [ -z "$PROJ_NAME" ] || [ -z "$SWEEP_ID" ]; then
+    echo "Error: PROJ_NAME and SWEEP_ID must be set"
+    exit 1
+fi
 
-EXP_NAME=b64_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 6 -b 64  >> resources/$EXP_NAME.log 2>&1 &
+# Create logs directory if it doesn't exist
+mkdir -p resources/logs
 
-EXP_NAME=b128_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 5 -b 128 >> resources/$EXP_NAME.log 2>&1 &
+# Run 3 agents per GPU across 8 GPUs (24 total agents)
+CUDA_VISIBLE_DEVICES=0 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_0_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_0_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_0_3.log 2>&1 &
 
-EXP_NAME=b256_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 4 -b 256 >> resources/$EXP_NAME.log 2>&1 &
+CUDA_VISIBLE_DEVICES=1 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_1_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=1 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_1_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=1 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_1_3.log 2>&1 &
 
-EXP_NAME=b256_vit_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 3 -b 1024 --encoder_type vit --loss_type vicreg >> resources/$EXP_NAME.log 2>&1 &
+CUDA_VISIBLE_DEVICES=2 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_2_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=2 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_2_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=2 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_2_3.log 2>&1 &
 
+CUDA_VISIBLE_DEVICES=3 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_3_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=3 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_3_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=3 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_3_3.log 2>&1 &
 
+CUDA_VISIBLE_DEVICES=4 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_4_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=4 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_4_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=4 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_4_3.log 2>&1 &
+
+CUDA_VISIBLE_DEVICES=5 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_5_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=5 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_5_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=5 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_5_3.log 2>&1 &
+
+CUDA_VISIBLE_DEVICES=6 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_6_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=6 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_6_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=6 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_6_3.log 2>&1 &
+
+CUDA_VISIBLE_DEVICES=7 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_7_1.log 2>&1 &
+CUDA_VISIBLE_DEVICES=7 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_7_2.log 2>&1 &
+CUDA_VISIBLE_DEVICES=7 python sweep.py --sweep_id $SWEEP_ID > resources/logs/${SWEEP_ID}_7_3.log 2>&1 &
+
+wait # Wait for all background processes to complete

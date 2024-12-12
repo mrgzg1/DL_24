@@ -93,7 +93,8 @@ def parse_args():
     parser.add_argument('--data_path',             type=str,      default='/scratch/DL24FA', required=True)
     parser.add_argument('--experiment_name',        type=str,      default=None, required=True)
     parser.add_argument('--eval',                  action='store_true')
-
+    parser.add_argument('--wandb_id', type=str, default=None, 
+                      help='Wandb run ID to reuse existing run')
 
     args = parser.parse_args()
     for arg in vars(args):
