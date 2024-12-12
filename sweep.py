@@ -1,16 +1,20 @@
 import wandb
 import subprocess
 import math
+import os
 
 def train_jepa(config=None):
     with wandb.init(config=config) as w_run:
         config = wandb.config
         
+        # Get full path to main.py
+        main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
+        
         # Construct command with sweep parameters
         cmd = [
-            "python", "main.py",
+            "python", main_path,
             "--experiment_name", f"sweep_{wandb.run.id}",
-            "--data_path", "/data/DL_24/data",
+            "--data_path", "/data/DL_24/data", 
             "--batch_size", str(config.batch_size),
             "--learning_rate", str(config.learning_rate),
             "--epochs", str(config.epochs),
@@ -25,7 +29,7 @@ def train_jepa(config=None):
         if process.returncode != 0:
             print(f"Error running training: {stderr.decode()}")
 
-# Define sweep configuration
+# Define sweep configuration  
 sweep_config = {
     'method': 'bayes',  # Using Bayesian optimization
     'metric': {
