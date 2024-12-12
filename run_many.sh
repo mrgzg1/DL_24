@@ -1,4 +1,34 @@
-# set SWEEP_ID and run this script to take over all the available GPU, estimated 10G / agent / GPU
-CUDA_VISIBLE_DEVICES=1 wandb agent -p wall_jepa_sweep $SWEEP_ID
+# Run 3 agents per GPU across 8 GPUs (24 total agents)
+CUDA_VISIBLE_DEVICES=0 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=0 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=0 wandb agent -p $PROJ_NAME $SWEEP_ID &
 
+CUDA_VISIBLE_DEVICES=1 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=1 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=1 wandb agent -p $PROJ_NAME $SWEEP_ID &
 
+CUDA_VISIBLE_DEVICES=2 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=2 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=2 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+CUDA_VISIBLE_DEVICES=3 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=3 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=3 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+CUDA_VISIBLE_DEVICES=4 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=4 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=4 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+CUDA_VISIBLE_DEVICES=5 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=5 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=5 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+CUDA_VISIBLE_DEVICES=6 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=6 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=6 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+CUDA_VISIBLE_DEVICES=7 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=7 wandb agent -p $PROJ_NAME $SWEEP_ID &
+CUDA_VISIBLE_DEVICES=7 wandb agent -p $PROJ_NAME $SWEEP_ID &
+
+wait # Wait for all background processes to complete
