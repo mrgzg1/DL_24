@@ -11,6 +11,7 @@ import os
 import wandb
 from configs import parse_args, save_args, check_folder_paths, load_args
 
+TRAIN_JEPA = True
 CONFIG = None # used as global to save args
 
 def get_device(args):
