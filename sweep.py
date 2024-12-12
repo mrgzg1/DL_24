@@ -1,6 +1,6 @@
 import wandb
 import subprocess
-import os
+import math
 
 def train_jepa(config=None):
     with wandb.init(config=config) as w_run:
@@ -15,7 +15,6 @@ def train_jepa(config=None):
             "--learning_rate", str(config.learning_rate),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
-            "--d_model", str(config.d_model),
             "--gpu_id", "0"  # You may want to manage this differently
             "--wandb_id", w_run.id
         ]
