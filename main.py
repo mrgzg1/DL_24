@@ -90,8 +90,8 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
         print(f"{probe_attr} loss: {loss}")
         wandb.log({f"eval_{probe_attr}_loss": loss})
 
-def train_jepa(device, model, train_ds, config, save_path):
-    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, config=config, save_path=save_path)
+def train_jepa(device, model, train_ds, val_ds, config, save_path):
+    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, val_ds=val_ds, config=config, save_path=save_path)
     model = trainer.train()
 
 def load_model_weights(model, path, device):
