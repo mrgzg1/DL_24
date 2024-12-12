@@ -1,4 +1,5 @@
 from typing import NamedTuple, Optional
+import random
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
@@ -179,6 +180,49 @@ class WallDataset:
 
         # Kill the plot
         plt.close()
+
+def create_small_dataset(data_path, n, output_path, seed=42):
+    """
+    Create a small dataset of size n from the original dataset.
+
+    Args:
+    data_path (str): Path to the original dataset
+    n (int): Number of samples to include in the small dataset
+    output_path (str): Path to save the small dataset
+    seed (int): Random seed for reproducibility
+    """
+    random.seed(seed)
+
+    # Load the original data
+    states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+    actions = np.load(f"{data_path}/actions.npy")
+
+    # Check if locations exist
+    try:
+        locations = np.load(f"{data_path}/locations.npy")
+        has_locations = True
+    except FileNotFoundError:
+        has_locations = False
+
+    # Get total number of samples
+    total_samples = len(states)
+
+    # Randomly select n indices
+    selected_indices = random.sample(range(total_samples), n)
+
+    # Create small datasets
+    small_states = states[selected_indices]
+    small_actions = actions[selected_indices]
+
+    # Save small datasets
+    np.save(f"{output_path}/states.npy", small_states)
+    np.save(f"{output_path}/actions.npy", small_actions)
+
+    if has_locations:
+        small_locations = locations[selected_indices]
+        np.save(f"{output_path}/locations.npy", small_locations)
+
+    print(f"Created small dataset with {n} samples at {output_path}")
 
 
 def create_wall_dataloader(
