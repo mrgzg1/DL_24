@@ -101,20 +101,20 @@ def load_model_weights(model, path, device):
     model.device = device
     return model
 
-def main(wandb_run=None):
+if __name__ == "__main__":
     args = parse_args()
-    global CONFIG
     CONFIG = args
 
     # Initialize wandb
-    if wandb_run is None:
+    if args.wandb_id is None:
         wandb.init(
             project="wall_jepa", 
             name=args.experiment_name,
             config=args
         )
     else:
-        wandb.init = wandb_run
+        # Reuse existing run
+        wandb.init(id=args.wandb_id, resume="allow")
 
     folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
     resources_path = os.path.join(folder_path, "resources")
@@ -185,7 +185,3 @@ def main(wandb_run=None):
             except Exception as e:
                 print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
                 continue
-
-
-if __name__ == "__main__":
-    main()

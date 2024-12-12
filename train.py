@@ -101,10 +101,12 @@ class TrainJEPA():
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
 
-            # After each epoch, evaluate the model
-            print("Evaluating model...")
-            prober = self.evaluator.train_pred_prober()
-            avg_losses = self.evaluator.evaluate_all(prober=prober)
+            with torch.no_grad(): # to be safe
+                # After each epoch, evaluate the model
+                print("Evaluating model...")
+                prober = self.evaluator.train_pred_prober()
+                avg_losses = self.evaluator.evaluate_all(prober=prober)
+                print(f"wall: {avg_losses['wall']} | norm: {avg_losses['normal']}")
             
             # Log all evaluation metrics
             wandb.log({

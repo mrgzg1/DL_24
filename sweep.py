@@ -3,7 +3,7 @@ import subprocess
 import os
 
 def train_jepa(config=None):
-    with wandb.init(config=config):
+    with wandb.init(config=config) as w_run:
         config = wandb.config
         
         # Construct command with sweep parameters
@@ -17,6 +17,7 @@ def train_jepa(config=None):
             "--encoder_type", config.encoder_type,
             "--d_model", str(config.d_model),
             "--gpu_id", "0"  # You may want to manage this differently
+            "--wandb_id", w_run.id
         ]
         
         # Run the training script
@@ -46,16 +47,15 @@ sweep_config = {
             'values': [10, 20, 30]
         },
         'encoder_type': {
-            'values': ['cnn', 'vit']
-        },
-        'd_model': {
-            'values': [64, 128, 256, 512]
+            'values': ['cnn']
         }
     }
 }
 
 # Initialize sweep
 sweep_id = wandb.sweep(sweep_config, project='wall_jepa_sweep')
+print("Agent:")
+print(sweep_id)
 
 # Start sweep agent
 wandb.agent(sweep_id, train_jepa, count=20)  # Will run 20 different configurations
