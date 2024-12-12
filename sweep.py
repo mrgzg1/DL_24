@@ -59,10 +59,24 @@ sweep_config = {
     }
 }
 
-# Initialize sweep
-sweep_id = wandb.sweep(sweep_config, project='wall_jepa_sweep')
-print("Agent:")
-print(sweep_id)
+def create_sweep():
+    # Initialize sweep
+    sweep_id = wandb.sweep(sweep_config, project='wall_jepa_sweep')
+    print("Created sweep with ID:")
+    print(sweep_id)
+    return sweep_id
 
-# Start sweep agent
-wandb.agent(sweep_id, train_jepa, count=20)  # Will run 20 different configurations
+def start_agent(sweep_id=None):
+    if sweep_id is None:
+        sweep_id = create_sweep()
+    
+    # Start sweep agent
+    wandb.agent(sweep_id, train_jepa, count=20)  # Will run 20 different configurations
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sweep_id', type=str, help='Optional: ID of existing sweep to run')
+    args = parser.parse_args()
+    
+    start_agent(args.sweep_id)
