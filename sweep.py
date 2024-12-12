@@ -15,7 +15,6 @@ def train_jepa(config=None):
             "--learning_rate", str(config.learning_rate),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
-            "--gpu_id", "0"  # You may want to manage this differently
             "--wandb_id", w_run.id
         ]
         
@@ -38,9 +37,14 @@ sweep_config = {
             'values': [32, 64, 128, 256, 512]
         },
         'learning_rate': {
-            'distribution': 'log_uniform',
-            'min': math.log(1e-5),
-            'max': math.log(1e-2)
+            'distribution': 'log_uniform_values',
+            'min': 1e-5,
+            'max': 1e-2
+        },
+        'momentum': {
+            'distribution': 'uniform',
+            'min': 0.9,
+            'max': 0.999
         },
         'epochs': {
             'values': [10, 20, 30]
