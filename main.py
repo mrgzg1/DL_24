@@ -16,9 +16,9 @@ CONFIG = None # used as global to save args
 
 def get_device(args):
     """Set CUDA device based on gpu_id and return device."""
-    torch.cuda.set_device(args.gpu_id)
-    device = torch.device(f"cuda:{args.gpu_id}")
-    print(f"Using device: cuda:{args.gpu_id}")
+    # torch.cuda.set_device(args.gpu_id)
+    device = torch.device(f"cuda")
+    print(f"Using device: cuda")
     return device
 
 
