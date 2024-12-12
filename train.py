@@ -11,17 +11,25 @@ from matplotlib import pyplot as plt
 import wandb
 
 from schedulers import Scheduler, LRSchedule
+from evaluator import ProbingEvaluator
 from configs import ConfigBase
 
 
 class TrainJEPA():
-    def __init__(self, device, model, train_ds, config, save_path):
+    def __init__(self, device, model, train_ds, val_ds, config, save_path):
         self.device = device
         self.model = model
         self.train_ds = train_ds
+        self.val_ds = val_ds  # Add validation datasets
         self.config = config
         self.save_path = save_path
-
+        self.evaluator = ProbingEvaluator(
+            device=device,
+            model=model,
+            probe_train_ds=val_ds['train'],
+            probe_val_ds={'normal': val_ds['normal'], 'wall': val_ds['wall']},
+            quick_debug=False
+        )
 
     def train(self):
         self.model.to(self.device)
@@ -40,7 +48,8 @@ class TrainJEPA():
         best_train_loss = float('inf')
         step = 0
         lr = self.config.warmup_lr  # Initialize learning rate
-
+        best_eval_loss = float('inf')
+        
         for epoch in range(self.config.epochs):
             
             total_energy = 0.0
@@ -92,22 +101,32 @@ class TrainJEPA():
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
 
-            # Log epoch metrics
+            # After each epoch, evaluate the model
+            print("Evaluating model...")
+            prober = self.evaluator.train_pred_prober()
+            avg_losses = self.evaluator.evaluate_all(prober=prober)
+            
+            # Log all evaluation metrics
             wandb.log({
                 'epoch': epoch,
                 'avg_energy': avg_energy,
-                'best_train_loss': best_train_loss
+                'eval/normal_loss': avg_losses['normal'],
+                'eval/wall_loss': avg_losses['wall'],
+                'eval/combined_loss': (avg_losses['normal'] + avg_losses['wall'])/2
             }, step=step)
+
+            # Save model if evaluation loss improves
+            eval_loss = (avg_losses['normal'] + avg_losses['wall'])/2
+            if eval_loss < best_eval_loss:
+                best_eval_loss = eval_loss
+                self.save_model(self.save_path)
+                wandb.run.summary['best_eval_loss'] = best_eval_loss
+
 
             if avg_energy < best_train_loss:
                 best_train_loss = avg_energy
                 self.save_model(self.save_path)
                 wandb.run.summary['best_train_loss'] = best_train_loss
-
-            if epoch % 5 == 0:
-                self.save_model(self.save_path, int(epoch/5))
-
-
 
         return self.model   
 
@@ -289,11 +308,13 @@ class TrainJEPA():
         # Save model locally
         torch.save(self.model.state_dict(), save_path)
         
-        # Log model artifact to wandb
-        artifact = wandb.Artifact(
-            artifact_name,
-            type="model",
-            description=f"Model checkpoint at iteration {i if i is not None else 'best'}"
-        )
-        artifact.add_file(save_path)
-        wandb.log_artifact(artifact)
+        # only save if need be
+        if i is not None:
+            # Log model artifact to wandb
+            artifact = wandb.Artifact(
+                artifact_name,
+                type="model",
+                description=f"Model checkpoint at iteration {i if i is not None else 'best'}"
+            )
+            artifact.add_file(save_path)
+            wandb.log_artifact(artifact)

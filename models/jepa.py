@@ -30,7 +30,6 @@ import torch.nn as nn
 import numpy as np
 import copy
 from typing import List
-from torchvision.models import resnet18
 from .encoder import Encoder, CNNBackbone
 from .predictor import Predictor
 

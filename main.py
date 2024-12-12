@@ -100,16 +100,19 @@ def load_model_weights(model, path, device):
     model.device = device
     return model
 
-if __name__ == "__main__":
+def main(wandb_run=None):
     args = parse_args()
     CONFIG = args
 
     # Initialize wandb
-    wandb.init(
-        project="wall_jepa", 
-        name=args.experiment_name,
-        config=args
-    )
+    if wandb_run is None:
+        wandb.init(
+            project="wall_jepa", 
+            name=args.experiment_name,
+            config=args
+        )
+    else:
+        wandb.init = wandb_run
 
     folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
     resources_path = os.path.join(folder_path, "resources")
@@ -130,36 +133,57 @@ if __name__ == "__main__":
         save_args(args, os.path.join(experiment_path, "args.txt"))
 
         model_path = os.path.join(experiment_path, "checkpoints")
+        # Load both training and validation data
         train_ds = load_data_jepa(device, args.batch_size)
+        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+        
+        val_ds = {
+            'train': probe_train_ds,
+            'normal': probe_val_ds['normal'],
+            'wall': probe_val_ds['wall']
+        }
+        
         model = load_model(device, args)
-        train_jepa(device, model, train_ds, config=args, save_path=model_path)
-    # evaluate the model at the end of every run anyways
-    if not os.path.exists(experiment_path):
-        print(f"Error: Experiment directory {experiment_path} does not exist")
-        sys.exit(1)
+        train_jepa(
+            device, 
+            model, 
+            train_ds, 
+            val_ds,  # Pass validation datasets
+            config=args, 
+            save_path=model_path
+        )    
         
-    # Fix path construction to ensure proper joining
-    checkpoints_dir = os.path.join(experiment_path, "checkpoints")
-    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
-    
-    if not checkpoint_files:
-        print(f"Error: No checkpoint files found in {checkpoints_dir}")
-        sys.exit(1)
+    else:# evaluate the model at the end of every run anyways
+        if not os.path.exists(experiment_path):
+            print(f"Error: Experiment directory {experiment_path} does not exist")
+            sys.exit(1)
+            
+        # Fix path construction to ensure proper joining
+        checkpoints_dir = os.path.join(experiment_path, "checkpoints")
+        checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
         
-    print(f"Experiment path: {experiment_path}")
-    print("Found checkpoints:", checkpoint_files)
+        if not checkpoint_files:
+            print(f"Error: No checkpoint files found in {checkpoints_dir}")
+            sys.exit(1)
+            
+        print(f"Experiment path: {experiment_path}")
+        print("Found checkpoints:", checkpoint_files)
 
-    # Use the same device as specified in args
-    device = get_device(args)
-    probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
-    model = load_model(device, args)
+        # Use the same device as specified in args
+        device = get_device(args)
+        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+        model = load_model(device, args)
 
-    # Evaluate each checkpoint
-    for checkpoint_path in checkpoint_files:
-        print("\nTesting JEPA model:", checkpoint_path)
-        try:
-            model = load_model_weights(model, checkpoint_path, device)
-            evaluate_model(device, model, probe_train_ds, probe_val_ds)
-        except Exception as e:
-            print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
-            continue
+        # Evaluate each checkpoint
+        for checkpoint_path in checkpoint_files:
+            print("\nTesting JEPA model:", checkpoint_path)
+            try:
+                model = load_model_weights(model, checkpoint_path, device)
+                evaluate_model(device, model, probe_train_ds, probe_val_ds)
+            except Exception as e:
+                print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
+                continue
+
+
+if __name__ == "__main__":
+    main()
