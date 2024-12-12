@@ -103,6 +103,7 @@ def load_model_weights(model, path, device):
 
 def main(wandb_run=None):
     args = parse_args()
+    global CONFIG
     CONFIG = args
 
     # Initialize wandb
