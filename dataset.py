@@ -11,16 +11,64 @@ class WallSample(NamedTuple):
     actions: torch.Tensor
 
 
+def horizontal_flip(image, action):
+    """Apply horizontal flip augmentation to image and adjust action accordingly"""
+    aug_image = image.copy()
+    aug_action = action.copy()
+    aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=2)  # Flip agent horizontally
+    aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=2)  # Flip walls and borders horizontally
+    aug_action[:, 0] = -aug_action[:, 0]  # Reverse x-component of actions
+    return aug_image, aug_action
+
+def vertical_flip(image, action):
+    """Apply vertical flip augmentation to image and adjust action accordingly"""
+    aug_image = image.copy()
+    aug_action = action.copy()
+    aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=1)  # Flip agent vertically
+    aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=1)  # Flip walls and borders vertically
+    aug_action[:, 1] = -aug_action[:, 1]  # Reverse y-component of actions
+    return aug_image, aug_action
+
+def add_gaussian_noise(image, std=0.05):
+    """Add Gaussian noise to image"""
+    aug_image = image.copy()
+    noise = np.random.normal(0, std, aug_image.shape)
+    aug_image += noise
+    aug_image = np.clip(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
+    return aug_image
+
+def apply_augmentations(image, action, p_flip=0.5, noise_std=0.05):
+    """Apply all augmentations with given probabilities"""
+    aug_image = image.copy()
+    aug_action = action.copy()
+    
+    # Horizontal flip
+    if np.random.rand() < p_flip:
+        aug_image, aug_action = horizontal_flip(aug_image, aug_action)
+        
+    # Vertical flip    
+    if np.random.rand() < p_flip:
+        aug_image, aug_action = vertical_flip(aug_image, aug_action)
+        
+    # Add noise
+    aug_image = add_gaussian_noise(aug_image, noise_std)
+    
+    return aug_image, aug_action
+
+
 class WallDataset:
     def __init__(
         self,
         data_path,
         probing=False,
         device="cuda",
+        apply_augs=False,
+        p_flip=0.5
     ):
         self.device = device
         self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
         self.actions = np.load(f"{data_path}/actions.npy")
+        self.p_flip = p_flip
 
         if probing:
             self.locations = np.load(f"{data_path}/locations.npy")
@@ -31,27 +79,15 @@ class WallDataset:
         print(f"States shape: {self.states.shape}")
         print(f"Actions shape: {self.actions.shape}")
 
+        if apply_augs:
+            # Augment the dataset
+            aug_states, aug_actions = self.augment_dataset(self.states, self.actions)
+            self.states = np.concatenate([self.states, aug_states], axis=0)
+            self.actions = np.concatenate([self.actions, aug_actions], axis=0)
 
-        # Augment the dataset
-        aug_states, aug_actions = self.augment_dataset(self.states, self.actions)
-
-        self.states = np.concatenate([self.states, aug_states], axis=0)
-        self.actions = np.concatenate([self.actions, aug_actions], axis=0)
-
-        print(f"Dataset size: {len(self.states)}")
-        print(f"States shape: {self.states.shape}")
-        print(f"Actions shape: {self.actions.shape}")
-
-
-
-        
-
-        # self._print_data_stats()
-        
-        # Display a 5 random trajectories
-        # for i in range(5):
-        #     self.display_trajectory(i)
-
+            print(f"Augmented dataset size: {len(self.states)}")
+            print(f"Augmented states shape: {self.states.shape}")
+            print(f"Augmented actions shape: {self.actions.shape}")
 
     def __len__(self):
         return len(self.states)
@@ -94,7 +130,6 @@ class WallDataset:
             aug_images (numpy.ndarray): Augmented images of shape (2 * N, T, 2, 65, 65).
             aug_actions (numpy.ndarray): Adjusted actions of shape (2 * N, T-1, 2).
         """
-
         N, T, _, H, W = images.shape
         aug_images = []
         aug_actions = []
@@ -104,27 +139,9 @@ class WallDataset:
             aug_images.append(images[i])
             aug_actions.append(actions[i])
 
-            # Create augmented image
-            aug_image = images[i].copy()
-            aug_action = actions[i].copy()
-
-            # Horizontal flip
-            if np.random.rand() < 0.5:
-                aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=2)  # Flip agent horizontally
-                aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=2)  # Flip walls and borders horizontally
-                aug_action[:, 0] = -aug_action[:, 0]  # Reverse x-component of actions
-
-            # Vertical flip
-            if np.random.rand() < 0.5:
-                aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=1)  # Flip agent vertically
-                aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=1)  # Flip walls and borders vertically
-                aug_action[:, 1] = -aug_action[:, 1]  # Reverse y-component of actions
-
-            # Add Gaussian noise
-            noise = np.random.normal(0, 0.05, aug_image.shape)
-            aug_image += noise
-            aug_image = np.clip(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
-
+            # Apply augmentations
+            aug_image, aug_action = apply_augmentations(images[i], actions[i], p_flip=self.p_flip)
+            
             # Append augmented data
             aug_images.append(aug_image)
             aug_actions.append(aug_action)
@@ -134,12 +151,6 @@ class WallDataset:
         aug_actions = np.array(aug_actions)
 
         return aug_images, aug_actions
-
-
-
-
-
-
 
     # Display a trajectory of observations using matplotlib
     def display_trajectory(self, i):
