@@ -18,7 +18,7 @@ def train_jepa(config=None):
             "--batch_size", str(config.batch_size),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
-            "--p_augment_data", config.p_augment_data,
+            "--p_augment_data", str(config.p_augment_data),
             "--wandb_id", w_run.id
         ]
         
@@ -47,7 +47,7 @@ sweep_config = {
             'values': ['cnn']
         },
         'p_augment_data': {
-            'values': [0,0.05,0.1,0.5]
+            'values': [0, 0.01, 0.025, 0.05, 0.1]
         }
     }
 }
