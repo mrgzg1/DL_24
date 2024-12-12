@@ -16,9 +16,9 @@ def train_jepa(config=None):
             "--experiment_name", f"sweep_{wandb.run.id}",
             "--data_path", "/data/DL_24/data", 
             "--batch_size", str(config.batch_size),
-            "--learning_rate", str(config.learning_rate),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
+            "--p_augment_data", config.p_augment_data,
             "--wandb_id", w_run.id
         ]
         
@@ -38,23 +38,16 @@ sweep_config = {
     },
     'parameters': {
         'batch_size': {
-            'values': [32, 64, 128, 256, 512]
-        },
-        'learning_rate': {
-            'distribution': 'log_uniform_values',
-            'min': 1e-5,
-            'max': 1e-2
-        },
-        'momentum': {
-            'distribution': 'uniform',
-            'min': 0.9,
-            'max': 0.999
+            'values': [256, 512, 1024]
         },
         'epochs': {
-            'values': [10, 20, 30]
+            'values': [20]
         },
         'encoder_type': {
             'values': ['cnn']
+        },
+        'p_augment_data': {
+            'values': [0,0.05,0.1,0.5]
         }
     }
 }

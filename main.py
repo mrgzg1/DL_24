@@ -53,7 +53,7 @@ def load_data_probe(device, batch_size):
     return probe_train_ds, probe_val_ds
 
 
-def load_data_jepa(device, batch_size):
+def load_data_jepa(device, args):
     data_path = CONFIG.data_path
 
     train_ds = create_wall_dataloader(
@@ -61,7 +61,8 @@ def load_data_jepa(device, batch_size):
         probing=False,
         device=device,
         train=True,
-        batch_size=batch_size,
+        batch_size=args.batch_size,
+        p_augment_data=args.p_augment_data
     )
 
     return train_ds
@@ -136,7 +137,7 @@ if __name__ == "__main__":
 
         model_path = os.path.join(experiment_path, "checkpoints")
         # Load both training and validation data
-        train_ds = load_data_jepa(device, args.batch_size)
+        train_ds = load_data_jepa(device, args)
         probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
         
         val_ds = {

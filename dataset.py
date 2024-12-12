@@ -289,13 +289,19 @@ def create_wall_dataloader(
     probing=False,
     device="cuda",
     batch_size=64,
+    p_augment_data=0, # probablity of augmenting
     train=True,
 ):
+    if not train and p_augment_data > 0.0:
+        raise("Don't augment probe data pls")
+    assert 0 <= p_augment_data <= 1
     print(f"Loading data from {data_path} ...")
     ds = WallDataset(
         data_path=data_path,
         probing=probing,
         device=device,
+        apply_augs=True if p_augment_data > 0.0 else False,
+        p_aug=p_augment_data
     )
 
     loader = torch.utils.data.DataLoader(

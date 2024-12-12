@@ -79,6 +79,7 @@ def parse_args():
     parser.add_argument('-s', '--shuffle',         type=bool,     default=False)
     parser.add_argument('-n', '--num_workers',     type=int,      default=4)
     parser.add_argument('--seed',                  type=int,      default=10)
+    parser.add_argument('--p_augment_data',          type=float,      default=0)
 
     # Optimizer
     parser.add_argument('-l', '--learning_rate',   type=float,    default=1e-3)
