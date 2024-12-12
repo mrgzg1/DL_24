@@ -111,12 +111,12 @@ class WallDataset:
         probing=False,
         device="cuda",
         apply_augs=False,
-        p_flip=0.5
+        p_aug=0.1
     ):
         self.device = device
         self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
         self.actions = np.load(f"{data_path}/actions.npy")
-        self.p_flip = p_flip
+        self.p_aug = p_aug
 
         if probing:
             self.locations = np.load(f"{data_path}/locations.npy")
@@ -128,11 +128,11 @@ class WallDataset:
         print(f"Actions shape: {self.actions.shape}")
 
         if apply_augs:
+            print("Applying augmentation")
             # Augment the dataset
             aug_states, aug_actions = self.augment_dataset(self.states, self.actions)
             self.states = np.concatenate([self.states, aug_states], axis=0)
             self.actions = np.concatenate([self.actions, aug_actions], axis=0)
-
             print(f"Augmented dataset size: {len(self.states)}")
             print(f"Augmented states shape: {self.states.shape}")
             print(f"Augmented actions shape: {self.actions.shape}")
@@ -188,7 +188,7 @@ class WallDataset:
             aug_actions.append(actions[i])
 
             # Apply augmentations
-            aug_image, aug_action = apply_augmentations(images[i], actions[i], p_flip=self.p_flip)
+            aug_image, aug_action = apply_augmentations(images[i], actions[i], p_aug=self.p_aug)
             
             # Append augmented data
             aug_images.append(aug_image)
