@@ -2,6 +2,10 @@ __pycache__/
 */__pycache__/
 **/__pycache__/
 
-data/*
+.ipynb_checkpoints
+*/.ipynb_checkpoints
+**/.ipynb_checkpoints
+wandb/
+data/
 
-resources/*
+resources/
