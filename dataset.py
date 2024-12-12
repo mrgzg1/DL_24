@@ -29,6 +29,30 @@ def vertical_flip(image, action):
     aug_action[:, 1] = -aug_action[:, 1]  # Reverse y-component of actions
     return aug_image, aug_action
 
+def rotate_90(image, action):
+    """
+    Rotate image by 90 degrees clockwise and adjust action vector accordingly
+    
+    Args:
+        image: numpy array of shape (B, C, H, W)
+        action: numpy array of shape (B, 2) containing (dx, dy) vectors
+    """
+    aug_image = image.copy()
+    aug_action = action.copy()
+    
+    # Rotate both channels (agent and walls) 90 degrees clockwise
+    aug_image[:, 0, :, :] = np.rot90(aug_image[:, 0, :, :], k=1, axes=(1,2))
+    aug_image[:, 1, :, :] = np.rot90(aug_image[:, 1, :, :], k=1, axes=(1,2))
+    
+    # For 90 degree clockwise rotation:
+    # x' = y
+    # y' = -x
+    old_x = aug_action[:, 0].copy()
+    aug_action[:, 0] = aug_action[:, 1]
+    aug_action[:, 1] = -old_x
+    
+    return aug_image, aug_action
+
 def add_gaussian_noise(image, std=0.05):
     """Add Gaussian noise to image"""
     aug_image = image.copy()
@@ -37,21 +61,45 @@ def add_gaussian_noise(image, std=0.05):
     aug_image = np.clip(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
     return aug_image
 
-def apply_augmentations(image, action, p_flip=0.5, noise_std=0.05):
-    """Apply all augmentations with given probabilities"""
+def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
+    """Apply all augmentations with given probabilities
+    
+    Args:
+        image: Input image to augment
+        action: Input action to adjust
+        p_aug: Overall probability of applying any augmentation
+        p_hflip: Probability of horizontal flip (if None, uses p_aug)
+        p_vflip: Probability of vertical flip (if None, uses p_aug)
+        p_rot90: Probability of 90 degree rotation (if None, uses p_aug)
+        p_noise: Probability of adding noise (if None, uses p_aug)
+        noise_std: Standard deviation for Gaussian noise
+    """
     aug_image = image.copy()
     aug_action = action.copy()
     
-    # Horizontal flip
-    if np.random.rand() < p_flip:
-        aug_image, aug_action = horizontal_flip(aug_image, aug_action)
-        
-    # Vertical flip    
-    if np.random.rand() < p_flip:
-        aug_image, aug_action = vertical_flip(aug_image, aug_action)
-        
-    # Add noise
-    aug_image = add_gaussian_noise(aug_image, noise_std)
+    # Set individual probabilities to overall p_aug if not specified
+    p_hflip = p_hflip if p_hflip is not None else p_aug
+    p_vflip = p_vflip if p_vflip is not None else p_aug
+    p_rot90 = p_rot90 if p_rot90 is not None else p_aug
+    p_noise = p_noise if p_noise is not None else p_aug
+    
+    # Only apply augmentations with probability p_aug
+    if np.random.rand() < p_aug:
+        # Horizontal flip
+        if np.random.rand() < p_hflip:
+            aug_image, aug_action = horizontal_flip(aug_image, aug_action)
+            
+        # Vertical flip    
+        if np.random.rand() < p_vflip:
+            aug_image, aug_action = vertical_flip(aug_image, aug_action)
+            
+        # 90 degree rotation
+        if np.random.rand() < p_rot90:
+            aug_image, aug_action = rotate_90(aug_image, aug_action)
+            
+        # Add noise
+        if np.random.rand() < p_noise:
+            aug_image = add_gaussian_noise(aug_image, noise_std)
     
     return aug_image, aug_action
 
