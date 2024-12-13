@@ -1,8 +1,11 @@
 from typing import NamedTuple, Optional
 import random
 import torch
+import torch.multiprocessing as mp
 import numpy as np
 from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader
+from prefetch_generator import BackgroundGenerator
 
 
 class WallSample(NamedTuple):
@@ -87,23 +90,46 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
     
     return aug_image, aug_action
 
+class DataLoaderX(DataLoader):
+    """Custom DataLoader that uses BackgroundGenerator for prefetching"""
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__())
+
 class WallDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_path,
         probing=False,
         device="cuda",
-        apply_augs=False,
-        p_aug=0.0
+        p_aug=0.0,
+        p_flip=None,
+        p_rotate=None,
+        p_noise=None,
+        noise_std=0.05
     ):
         self.device = device
-        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-        self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
-        self.apply_augs = apply_augs
+        # Load data into memory if enough RAM is available
+        # Otherwise keep mmap_mode="r" for memory efficiency
+        try:
+            self.states = np.load(f"{data_path}/states.npy")  # Load fully into memory
+            self.actions = np.load(f"{data_path}/actions.npy")
+        except MemoryError:
+            print("Warning: Not enough memory to load dataset fully, using memory mapping")
+            self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+            self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
+            
+        self.apply_augs = True if p_aug > 0 else False
         self.p_aug = p_aug
+        self.p_flip = p_flip
+        self.p_rotate = p_rotate
+        self.p_noise = p_noise
+        self.noise_std = noise_std
 
         if probing:
-            self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
+            try:
+                self.locations = np.load(f"{data_path}/locations.npy")
+            except MemoryError:
+                self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
         else:
             self.locations = None
 
@@ -115,14 +141,20 @@ class WallDataset(torch.utils.data.Dataset):
         return len(self.states)
 
     def __getitem__(self, i):
-        states = torch.from_numpy(self.states[i]).float()
-        actions = torch.from_numpy(self.actions[i]).float()
+        states = torch.from_numpy(self.states[i].copy()).float()  # Copy to avoid mmap issues
+        actions = torch.from_numpy(self.actions[i].copy()).float()
 
         if self.apply_augs:
-            states, actions = apply_augmentations(states, actions, p_aug=self.p_aug)
+            states, actions = apply_augmentations(states, actions, 
+                                                p_aug=self.p_aug,
+                                                p_hflip=self.p_flip,
+                                                p_vflip=self.p_flip,
+                                                p_rot90=self.p_rotate,
+                                                p_noise=self.p_noise,
+                                                noise_std=self.noise_std)
 
         if self.locations is not None:
-            locations = torch.from_numpy(self.locations[i]).float()
+            locations = torch.from_numpy(self.locations[i].copy()).float()
         else:
             locations = torch.empty(0)
 
@@ -147,6 +179,16 @@ class WallDataset(torch.utils.data.Dataset):
 
         # Print max and min action values
         print(f"Actions max: {self.actions.max()}", f"Actions min: {self.actions.min()}")
+        
+        # Print augmentation parameters
+        print("\nAugmentation parameters:")
+        print(f"Apply augmentations: {self.apply_augs}")
+        if self.apply_augs:
+            print(f"p_aug: {self.p_aug}")
+            print(f"p_flip: {self.p_flip}")
+            print(f"p_rotate: {self.p_rotate}")
+            print(f"p_noise: {self.p_noise}")
+            print(f"noise_std: {self.noise_std}")
         print()
 
     # Display a trajectory of observations using matplotlib
@@ -237,6 +279,10 @@ def create_wall_dataloader(
     batch_size=64,
     p_augment_data=0, # probablity of augmenting
     train=True,
+    p_noise=None,
+    p_flip=None,
+    p_rotate=None,
+    noise_std=0.05
 ):
     if not train and p_augment_data > 0.0:
         raise ValueError("Don't augment probe data pls")
@@ -246,16 +292,22 @@ def create_wall_dataloader(
         data_path=data_path,
         probing=probing,
         device=device,
-        apply_augs=True if p_augment_data > 0.0 else False,
-        p_aug=p_augment_data
+        p_aug=p_augment_data,
+        p_flip=p_flip,
+        p_rotate=p_rotate,
+        p_noise=p_noise,
+        noise_std=noise_std
     )
 
-    loader = torch.utils.data.DataLoader(
+    # Use custom DataLoader with background prefetching
+    loader = DataLoaderX(
         ds,
-        batch_size,
+        batch_size=batch_size,
         shuffle=train,
         drop_last=True,
-        pin_memory=False,
+        pin_memory=True,  # Enable pin_memory for faster data transfer to GPU
+        num_workers=4,    # Use multiple workers for data loading
+        persistent_workers=True  # Keep worker processes alive between epochs
     )
 
     return loader

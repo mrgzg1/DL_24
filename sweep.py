@@ -14,14 +14,15 @@ def train_jepa(config=None):
         cmd = [
             "python", main_path,
             "--experiment_name", f"sweep_{wandb.run.id}",
-            "--data_path", "/data/DL_24/data", 
+            "--data_path", "/data/DL_24/data",
             "--batch_size", str(config.batch_size),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
             "--p_augment_data", str(config.p_augment_data),
-            "--num_kernels", str(config.num_kernels),
-            "--repr_dim", str(config.repr_dim),
-            "--mlp_pred_arch", str(config.mlp_pred_arch),
+            "--p_flip", str(config.p_flip) if config.p_flip is not None else "None",
+            "--p_noise", str(config.p_noise) if config.p_noise is not None else "None",
+            "--rotate", str(config.rotate) if config.rotate is not None else "None",
+            "--noise_std", str(config.noise_std),
             "--wandb_id", w_run.id
         ]
         
@@ -32,58 +33,110 @@ def train_jepa(config=None):
         if process.returncode != 0:
             print(f"Error running training: {stderr.decode()}")
 
-# Define sweep configuration  
-sweep_config = {
-    'method': 'bayes',  # Using Bayesian optimization
-    'metric': {
-        'name': 'eval/combined_loss',  # The metric we want to optimize
-        'goal': 'minimize'
+# Define sweep configuration
+sweep_configs = {
+    # Experiment Set 1: Only flips
+    'flip_only': {
+        'method': 'grid',
+        'metric': {
+            'name': 'eval/combined_loss',
+            'goal': 'minimize'
+        },
+        'parameters': {
+            'batch_size': {'value': 256},
+            'epochs': {'value': 30},
+            'encoder_type': {'value': 'cnn'},
+            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
+            'p_flip': {'value': 1.0},
+            'p_noise': {'value': None},
+            'rotate': {'value': None},
+            'noise_std': {'value': 0.05}
+        }
     },
-    'parameters': {
-        'batch_size': {
-            'values': [256]#,512]
+    
+    # Experiment Set 2: Only rotations
+    'rotate_only': {
+        'method': 'grid',
+        'metric': {
+            'name': 'eval/combined_loss',
+            'goal': 'minimize'
         },
-        'epochs': {
-            'values': [10]
+        'parameters': {
+            'batch_size': {'value': 256},
+            'epochs': {'value': 30},
+            'encoder_type': {'value': 'cnn'},
+            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
+            'p_flip': {'value': None},
+            'p_noise': {'value': None},
+            'rotate': {'value': 1.0},
+            'noise_std': {'value': 0.05}
+        }
+    },
+    
+    # Experiment Set 3: Only noise with varying std
+    'noise_only': {
+        'method': 'grid',
+        'metric': {
+            'name': 'eval/combined_loss',
+            'goal': 'minimize'
         },
-        'encoder_type': {
-            'values': ['cnn']#, 'cnn-new']
+        'parameters': {
+            'batch_size': {'value': 256},
+            'epochs': {'value': 30},
+            'encoder_type': {'value': 'cnn'},
+            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
+            'p_flip': {'value': None},
+            'p_noise': {'value': 1.0},
+            'rotate': {'value': None},
+            'noise_std': {'values': [0.001, 0.005, 0.01, 0.05]}
+        }
+    },
+    
+    # Experiment Set 4: All augmentations together
+    'all_augs': {
+        'method': 'grid',
+        'metric': {
+            'name': 'eval/combined_loss',
+            'goal': 'minimize'
         },
-        'p_augment_data': {
-            'values': [0, 0.01, 0.025, 0.05, 0.1, 0.3]
-        },
-        # CNN specific
-        "num_kernels": {
-            'values': [4]#,6,8] #[2,4,8]
-        },
-        "repr_dim": {
-            'values': [256] #[512,256,128] #[128,256,512]
-        },
-        "mlp_pred_arch": {
-            'values': ['1024-512-256']#, '512-256-128']#[128,256,512]
-        },
+        'parameters': {
+            'batch_size': {'value': 256},
+            'epochs': {'value': 30},
+            'encoder_type': {'value': 'cnn'},
+            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
+            'p_flip': {'value': None},
+            'p_noise': {'value': None},
+            'rotate': {'value': None},
+            'noise_std': {'value': 0.05}
+        }
     }
 }
 
-def create_sweep(project_name):
+def create_sweep(project_name, experiment_type):
+    if experiment_type not in sweep_configs:
+        raise ValueError(f"Invalid experiment type. Choose from: {list(sweep_configs.keys())}")
+    
     # Initialize sweep
-    sweep_id = wandb.sweep(sweep_config, project=project_name)
-    print("Created sweep with ID:")
+    sweep_id = wandb.sweep(sweep_configs[experiment_type], project=project_name)
+    print(f"Created sweep for {experiment_type} with ID:")
     print(sweep_id)
     return sweep_id
 
-def start_agent(project_name, sweep_id=None):
+def start_agent(project_name, experiment_type, sweep_id=None):
     if sweep_id is None:
-        sweep_id = create_sweep(project_name)
+        sweep_id = create_sweep(project_name, experiment_type)
     
     # Start sweep agent
-    wandb.agent(sweep_id, train_jepa, count=20, project=project_name)  # Will run 20 different configurations
+    wandb.agent(sweep_id, train_jepa, project=project_name)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--sweep_id', type=str, help='Optional: ID of existing sweep to run')
     parser.add_argument('--project_name', type=str, default='wall_jepa_sweep', help='W&B project name')
+    parser.add_argument('--experiment_type', type=str, required=True, 
+                      choices=['flip_only', 'rotate_only', 'noise_only', 'all_augs'],
+                      help='Type of experiment to run')
     args = parser.parse_args()
     
-    start_agent(args.project_name, args.sweep_id)
+    start_agent(args.project_name, args.experiment_type, args.sweep_id)

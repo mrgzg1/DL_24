@@ -15,8 +15,6 @@ TRAIN_JEPA = True
 CONFIG = None # used as global to save args
 
 def get_device(args):
-    """Set CUDA device based on gpu_id and return device."""
-    # torch.cuda.set_device(args.gpu_id)
     device = torch.device(f"cuda")
     print(f"Using device: cuda")
     return device
@@ -62,7 +60,11 @@ def load_data_jepa(device, args):
         device=device,
         train=True,
         batch_size=args.batch_size,
-        p_augment_data=args.p_augment_data
+        p_augment_data=args.p_augment_data,
+        p_flip=args.p_flip,
+        p_noise=args.p_noise,
+        p_rotate=args.rotate,
+        noise_std=args.noise_std
     )
 
     return train_ds

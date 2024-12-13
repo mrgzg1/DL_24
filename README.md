@@ -149,3 +149,18 @@ team_name.txt contains the name of your team and members' NETIDs.
 Upload the zipped file to cloud storage and email the download link to TA wz1232@nyu.edu with subject line **"DL Final Project Submission. {Team Name}"**. The TA should be able to run `wget {link}`, unzip the folder, and run `python main.py` to get validation results. Failing to do so will result in substracted scores or even zero points. 
 
 **Submission deadline is 12/15**. Winners will be picked and asked to present their work on last class day 12/18.
+
+
+
+
+python main.py \
+    --experiment_name $EXP_NAME \
+    --data_path /data/dataset/DL2752 \
+    -b 256 \
+    --epochs 30 \
+    --p_augment_data 0.1 \
+    --p_flip 1.0 \
+    --p_noise 0 \
+    --rotate 0 \
+    --noise_std 0.05 \
+    >> resources/$EXP_NAME.log 2>&1 &

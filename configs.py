@@ -78,14 +78,17 @@ def parse_args():
     parser.add_argument('--mlp_pred_arch', help="pred dimension, final layer of repr_dim is automatically added",       type=str,       default='1024-512-256')               # mlp, gru, lstm, tcn
     # training
     parser.add_argument('-r', '--run_id',          type=int,      default=1)
-    parser.add_argument('-d', '--gpu_id',          type=int,      default=0)
     parser.add_argument('--num_devices',           type=int,      default=1)
     parser.add_argument('-e', '--epochs',          type=int,      default=20)
     parser.add_argument('-b', '--batch_size',      type=int,      default=128)
     parser.add_argument('-s', '--shuffle',         type=bool,     default=False)
     parser.add_argument('-n', '--num_workers',     type=int,      default=4)
     parser.add_argument('--seed',                  type=int,      default=10)
-    parser.add_argument('--p_augment_data',          type=float,      default=0)
+    parser.add_argument('--p_augment_data',        type=float,    default=0)
+    parser.add_argument('--p_flip',                type=float,    default=None)
+    parser.add_argument('--p_noise',               type=float,    default=None) 
+    parser.add_argument('--rotate',                type=float,    default=None)
+    parser.add_argument('--noise_std',             type=float,    default=0.05)
 
     # Optimizer
     parser.add_argument('-l', '--learning_rate',   type=float,    default=1e-3)
