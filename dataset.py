@@ -13,19 +13,15 @@ class WallSample(NamedTuple):
 
 def horizontal_flip(image, action):
     """Apply horizontal flip augmentation to image and adjust action accordingly"""
-    aug_image = image.copy()
-    aug_action = action.copy()
-    aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=2)  # Flip agent horizontally
-    aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=2)  # Flip walls and borders horizontally
+    aug_image = torch.flip(image, dims=[3])  # Flip both channels horizontally
+    aug_action = action.clone()
     aug_action[:, 0] = -aug_action[:, 0]  # Reverse x-component of actions
     return aug_image, aug_action
 
 def vertical_flip(image, action):
     """Apply vertical flip augmentation to image and adjust action accordingly"""
-    aug_image = image.copy()
-    aug_action = action.copy()
-    aug_image[:, 0, :, :] = np.flip(aug_image[:, 0, :, :], axis=1)  # Flip agent vertically
-    aug_image[:, 1, :, :] = np.flip(aug_image[:, 1, :, :], axis=1)  # Flip walls and borders vertically
+    aug_image = torch.flip(image, dims=[2])  # Flip both channels vertically
+    aug_action = action.clone()
     aug_action[:, 1] = -aug_action[:, 1]  # Reverse y-component of actions
     return aug_image, aug_action
 
@@ -34,20 +30,16 @@ def rotate_90(image, action):
     Rotate image by 90 degrees clockwise and adjust action vector accordingly
     
     Args:
-        image: numpy array of shape (B, C, H, W)
-        action: numpy array of shape (B, 2) containing (dx, dy) vectors
+        image: tensor of shape (B, C, H, W)
+        action: tensor of shape (B, 2) containing (dx, dy) vectors
     """
-    aug_image = image.copy()
-    aug_action = action.copy()
-    
-    # Rotate both channels (agent and walls) 90 degrees clockwise
-    aug_image[:, 0, :, :] = np.rot90(aug_image[:, 0, :, :], k=1, axes=(1,2))
-    aug_image[:, 1, :, :] = np.rot90(aug_image[:, 1, :, :], k=1, axes=(1,2))
+    aug_image = torch.rot90(image, k=1, dims=[2, 3])  # Rotate both channels clockwise
+    aug_action = action.clone()
     
     # For 90 degree clockwise rotation:
     # x' = y
     # y' = -x
-    old_x = aug_action[:, 0].copy()
+    old_x = aug_action[:, 0].clone()
     aug_action[:, 0] = aug_action[:, 1]
     aug_action[:, 1] = -old_x
     
@@ -55,10 +47,9 @@ def rotate_90(image, action):
 
 def add_gaussian_noise(image, std=0.05):
     """Add Gaussian noise to image"""
-    aug_image = image.copy()
-    noise = np.random.normal(0, std, aug_image.shape)
-    aug_image += noise
-    aug_image = np.clip(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
+    noise = torch.randn_like(image) * std
+    aug_image = image + noise
+    aug_image = torch.clamp(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
     return aug_image
 
 def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
@@ -74,8 +65,8 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
         p_noise: Probability of adding noise (if None, uses p_aug)
         noise_std: Standard deviation for Gaussian noise
     """
-    aug_image = image.copy()
-    aug_action = action.copy()
+    aug_image = image
+    aug_action = action
     
     # Set individual probabilities to overall p_aug if not specified
     p_hflip = p_hflip if p_hflip is not None else p_aug
@@ -84,21 +75,21 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
     p_noise = p_noise if p_noise is not None else p_aug
     
     # Only apply augmentations with probability p_aug
-    if np.random.rand() < p_aug:
+    if torch.rand(1).item() < p_aug:
         # Horizontal flip
-        if np.random.rand() < p_hflip:
+        if torch.rand(1).item() < p_hflip:
             aug_image, aug_action = horizontal_flip(aug_image, aug_action)
             
         # Vertical flip    
-        if np.random.rand() < p_vflip:
+        if torch.rand(1).item() < p_vflip:
             aug_image, aug_action = vertical_flip(aug_image, aug_action)
             
         # 90 degree rotation
-        if np.random.rand() < p_rot90:
+        if torch.rand(1).item() < p_rot90:
             aug_image, aug_action = rotate_90(aug_image, aug_action)
             
         # Add noise
-        if np.random.rand() < p_noise:
+        if torch.rand(1).item() < p_noise:
             aug_image = add_gaussian_noise(aug_image, noise_std)
     
     return aug_image, aug_action
@@ -114,12 +105,13 @@ class WallDataset:
         p_aug=0.1
     ):
         self.device = device
-        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-        self.actions = np.load(f"{data_path}/actions.npy")
+        self.states = torch.from_numpy(np.load(f"{data_path}/states.npy", mmap_mode="r")).float().to(device)
+        self.actions = torch.from_numpy(np.load(f"{data_path}/actions.npy")).float().to(device)
+        self.apply_augs = apply_augs
         self.p_aug = p_aug
 
         if probing:
-            self.locations = np.load(f"{data_path}/locations.npy")
+            self.locations = torch.from_numpy(np.load(f"{data_path}/locations.npy")).float().to(device)
         else:
             self.locations = None
 
@@ -127,25 +119,18 @@ class WallDataset:
         print(f"States shape: {self.states.shape}")
         print(f"Actions shape: {self.actions.shape}")
 
-        if apply_augs:
-            print("Applying augmentation")
-            # Augment the dataset
-            aug_states, aug_actions = self.augment_dataset(self.states, self.actions)
-            self.states = np.concatenate([self.states, aug_states], axis=0)
-            self.actions = np.concatenate([self.actions, aug_actions], axis=0)
-            print(f"Augmented dataset size: {len(self.states)}")
-            print(f"Augmented states shape: {self.states.shape}")
-            print(f"Augmented actions shape: {self.actions.shape}")
-
     def __len__(self):
         return len(self.states)
 
     def __getitem__(self, i):
-        states = torch.from_numpy(self.states[i]).float().to(self.device)
-        actions = torch.from_numpy(self.actions[i]).float().to(self.device)
+        states = self.states[i]
+        actions = self.actions[i]
+
+        if self.apply_augs:
+            states, actions = apply_augmentations(states, actions, p_aug=self.p_aug)
 
         if self.locations is not None:
-            locations = torch.from_numpy(self.locations[i]).float().to(self.device)
+            locations = self.locations[i]
         else:
             locations = torch.empty(0).to(self.device)
 
@@ -166,44 +151,10 @@ class WallDataset:
         print(f"Actions max: {self.actions.max()}", f"Actions min: {self.actions.min()}")
         print()
 
-    def augment_dataset(self, images, actions):
-        """
-        Augments the dataset with the defined augmentations and adjusts actions.
-
-        Args:
-            images (numpy.ndarray): Original images of shape (N, T, 2, 65, 65).
-            actions (numpy.ndarray): Original actions of shape (N, T-1, 2).
-
-        Returns:
-            aug_images (numpy.ndarray): Augmented images of shape (2 * N, T, 2, 65, 65).
-            aug_actions (numpy.ndarray): Adjusted actions of shape (2 * N, T-1, 2).
-        """
-        N, T, _, H, W = images.shape
-        aug_images = []
-        aug_actions = []
-
-        for i in range(N):
-            # Add original data
-            aug_images.append(images[i])
-            aug_actions.append(actions[i])
-
-            # Apply augmentations
-            aug_image, aug_action = apply_augmentations(images[i], actions[i], p_aug=self.p_aug)
-            
-            # Append augmented data
-            aug_images.append(aug_image)
-            aug_actions.append(aug_action)
-
-        # Convert to numpy arrays
-        aug_images = np.array(aug_images)
-        aug_actions = np.array(aug_actions)
-
-        return aug_images, aug_actions
-
     # Display a trajectory of observations using matplotlib
     def display_trajectory(self, i):
-        states = self.states[i]
-        actions = self.actions[i]
+        states = self.states[i].cpu().numpy()
+        actions = self.actions[i].cpu().numpy()
 
         # Image has 2 channel dimension. Overlay the two images to get the final image
         # The first channel is the wall image and the second channel is the agent image
@@ -229,12 +180,9 @@ class WallDataset:
             # print(f"Agent image max: {agent_image.max()}", f"Agent image min: {agent_image.min()}", f"Agent image mean: {agent_image.mean()}")
             ax.imshow(agent_image, cmap="jet", alpha=0.5)
             
-
             plt.pause(0.5)
             plt.draw()
             
-       
-
         plt.show()
 
         # Kill the plot
@@ -293,7 +241,7 @@ def create_wall_dataloader(
     train=True,
 ):
     if not train and p_augment_data > 0.0:
-        raise("Don't augment probe data pls")
+        raise ValueError("Don't augment probe data pls")
     assert 0 <= p_augment_data <= 1
     print(f"Loading data from {data_path} ...")
     ds = WallDataset(
