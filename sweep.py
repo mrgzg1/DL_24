@@ -41,26 +41,26 @@ sweep_config = {
     },
     'parameters': {
         'batch_size': {
-            'values': [256, 512, 1024]
+            'values': [256]#,512]
         },
         'epochs': {
-            'values': [20]
+            'values': [10]
         },
         'encoder_type': {
             'values': ['cnn', 'cnn-new']
         },
         'p_augment_data': {
-            'values': [0, 0.01, 0.025, 0.05, 0.1]
+            'values': [0, 0.01, 0.025, 0.05, 0.1, 0.3]
         },
         # CNN specific
         "num_kernels": {
-            'values': [4,8] #[2,4,8]
+            'values': [4,6,8] #[2,4,8]
         },
         "repr_dim": {
-            'values': [256,128] #[128,256,512]
+            'values': [512,256,128] #[128,256,512]
         },
         "mlp_pred_arch": {
-            'values': ['1024-512-256', '512-256-128']#[128,256,512]
+            'values': ['1024-512-256']#, '512-256-128']#[128,256,512]
         },
     }
 }
