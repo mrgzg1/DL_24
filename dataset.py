@@ -47,24 +47,13 @@ def rotate_90(image, action):
 
 def add_gaussian_noise(image, std=0.05):
     """Add Gaussian noise to image"""
-    noise = torch.randn_like(image) * std
-    aug_image = image + noise
-    aug_image = torch.clamp(aug_image, 0, 1)  # Ensure values remain in valid range [0, 1]
+    noise = torch.randn_like(image[0]) * std  # Generate noise only for the wall channel
+    aug_image = image.clone()
+    aug_image[0] = torch.clamp(aug_image[0] + noise, 0, 1)  # Apply noise only to wall channel
     return aug_image
 
 def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
-    """Apply all augmentations with given probabilities
-    
-    Args:
-        image: Input image to augment
-        action: Input action to adjust
-        p_aug: Overall probability of applying any augmentation
-        p_hflip: Probability of horizontal flip (if None, uses p_aug)
-        p_vflip: Probability of vertical flip (if None, uses p_aug)
-        p_rot90: Probability of 90 degree rotation (if None, uses p_aug)
-        p_noise: Probability of adding noise (if None, uses p_aug)
-        noise_std: Standard deviation for Gaussian noise
-    """
+    """Apply all augmentations with given probabilities for the entire trajectory"""
     aug_image = image
     aug_action = action
     
@@ -90,12 +79,12 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
             
         # Add noise
         if torch.rand(1).item() < p_noise:
-            aug_image = add_gaussian_noise(aug_image, noise_std)
+            noise = torch.randn_like(aug_image[:, 0]) * noise_std
+            aug_image[:, 0] = torch.clamp(aug_image[:, 0] + noise, 0, 1)
     
     return aug_image, aug_action
 
-
-class WallDataset:
+class WallDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_path,
@@ -105,13 +94,13 @@ class WallDataset:
         p_aug=0.1
     ):
         self.device = device
-        self.states = torch.from_numpy(np.load(f"{data_path}/states.npy", mmap_mode="r")).float().to(device)
-        self.actions = torch.from_numpy(np.load(f"{data_path}/actions.npy")).float().to(device)
+        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+        self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
         self.apply_augs = apply_augs
         self.p_aug = p_aug
 
         if probing:
-            self.locations = torch.from_numpy(np.load(f"{data_path}/locations.npy")).float().to(device)
+            self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
         else:
             self.locations = None
 
@@ -123,18 +112,24 @@ class WallDataset:
         return len(self.states)
 
     def __getitem__(self, i):
-        states = self.states[i]
-        actions = self.actions[i]
+        states = torch.from_numpy(self.states[i]).float()
+        actions = torch.from_numpy(self.actions[i]).float()
 
         if self.apply_augs:
             states, actions = apply_augmentations(states, actions, p_aug=self.p_aug)
 
         if self.locations is not None:
-            locations = self.locations[i]
+            locations = torch.from_numpy(self.locations[i]).float()
         else:
-            locations = torch.empty(0).to(self.device)
+            locations = torch.empty(0)
 
-        return WallSample(states=states, locations=locations, actions=actions)
+        sample = WallSample(states=states, locations=locations, actions=actions)
+        
+        # Move to GPU if required
+        if self.device == "cuda":
+            sample = WallSample(*(t.cuda() for t in sample))
+
+        return sample
 
     def _print_data_stats(self):
         print("Data statistics:")
