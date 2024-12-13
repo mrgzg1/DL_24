@@ -46,11 +46,15 @@ def rotate_90(image, action):
     return aug_image, aug_action
 
 def add_gaussian_noise(image, std=0.05):
-    """Add Gaussian noise to image"""
-    noise = torch.randn_like(image[0]) * std  # Generate noise only for the wall channel
+    """Add Gaussian noise to the wall channel only (channel=1), for all time steps."""
+    # image has shape (T, C, H, W)
+    # Select the wall channel across all time steps: aug_image[:, 1, ...]
     aug_image = image.clone()
-    aug_image[0] = torch.clamp(aug_image[0] + noise, 0, 1)  # Apply noise only to wall channel
+    noise = torch.randn_like(aug_image[:, 1]) * std  # Noise same shape as wall channel across T
+    aug_image[:, 1] = torch.clamp(aug_image[:, 1] + noise, 0, 1)
     return aug_image
+
+
 
 def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
     """Apply all augmentations with given probabilities for the entire trajectory"""
@@ -79,8 +83,7 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
             
         # Add noise
         if torch.rand(1).item() < p_noise:
-            noise = torch.randn_like(aug_image[:, 0]) * noise_std
-            aug_image[:, 0] = torch.clamp(aug_image[:, 0] + noise, 0, 1)
+            aug_image = add_gaussian_noise(aug_image, std=noise_std)
     
     return aug_image, aug_action
 
@@ -91,7 +94,7 @@ class WallDataset(torch.utils.data.Dataset):
         probing=False,
         device="cuda",
         apply_augs=False,
-        p_aug=0.1
+        p_aug=0.0
     ):
         self.device = device
         self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
