@@ -46,7 +46,7 @@ class TrainJEPA():
                     )
 
         best_train_loss = float('inf')
-        step = 0
+        step = 1  # Start step at 1 instead of 0
         lr = self.config.warmup_lr  # Initialize learning rate
         best_eval_loss = float('inf')
         
