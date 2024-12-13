@@ -34,18 +34,17 @@ from .encoder import Encoder, CNNBackbone
 from .predictor import Predictor
 
 class JEPA(nn.Module):
-    def __init__(self, device="cpu", bs=64, n_steps=17, enc_dim=256, action_dim=2, config=None):
+    def __init__(self, device="cpu", n_steps=17, action_dim=2, config=None):
         super(JEPA, self).__init__()
         self.device = device
-        self.bs = bs
         self.n_steps = n_steps
         self.repr_dim = 256
         self.config = config
         # self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim)
-        self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim, config=config)
+        self.encoder = Encoder(n_kernels=4, repr_dim=config.repr_dim, config=config)
         self.target_encoder = self.get_target_encoder()
         self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, 
-                                   arch="1024-512-256", n_steps=n_steps, 
+                                   arch=config.mlp_pred_arch, n_steps=n_steps, 
                                    norm_features=self.config.norm_features)
         self.get_num_params()
 

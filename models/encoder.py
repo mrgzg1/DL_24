@@ -16,10 +16,8 @@ import math
 # - Fuse the two representations using a linear layer to get the final representation
 
 class Encoder(nn.Module):
-    def __init__(self, n_kernels, repr_dim, config, dropout=0.1):
+    def __init__(self, config, dropout=0.1):
         super().__init__()
-        self.n_kernels = n_kernels
-        self.repr_dim = repr_dim
         self.dropout = dropout
         self.config = config
         self.wall_encoder = self._get_backbone(config.encoder_type)
@@ -28,7 +26,7 @@ class Encoder(nn.Module):
 
     def _get_backbone(self, backbone):
         if backbone == "cnn":
-            return CNNBackbone(self.n_kernels, self.repr_dim, self.dropout, self.config.norm_features)
+            return CNNBackbone(self.config.num_kernels, self.config.repr_dim, self.dropout, self.config.norm_features)
         elif backbone == "vit":
             return ViTBackbone(image_size=65, patch_size=16, 
                                in_channels=1, embed_dim=self.repr_dim, 
