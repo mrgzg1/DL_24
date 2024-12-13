@@ -71,11 +71,11 @@ def parse_args():
     parser.add_argument('--dropout',               type=float,     default=0.1)
 
     ## CNN specific args
-    parser.add_argument('--num_kernels',            type=int,       default=4)
-    parser.add_argument('--repr_dim',             type=int,       default=256)
+    parser.add_argument('--num_kernels', help="number of kernels in the encoder CNN, gets half'd for agent if cnn-new is used",            type=int,       default=4)
+    parser.add_argument('--repr_dim', help="encoder dimension/ hidden rep dim",             type=int,       default=256)
 
     ## Predictor specific args
-    parser.add_argument('--mlp_pred_arch',        type=str,       default='1024-512-256')               # mlp, gru, lstm, tcn
+    parser.add_argument('--mlp_pred_arch', help="pred dimension, final layer of repr_dim is automatically added",       type=str,       default='1024-512-256')               # mlp, gru, lstm, tcn
     # training
     parser.add_argument('-r', '--run_id',          type=int,      default=1)
     parser.add_argument('-d', '--gpu_id',          type=int,      default=0)

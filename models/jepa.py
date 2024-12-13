@@ -38,7 +38,7 @@ class JEPA(nn.Module):
         super(JEPA, self).__init__()
         self.device = device
         self.n_steps = n_steps
-        self.repr_dim = 256
+        self.repr_dim = config.repr_dim
         self.config = config
         self.encoder = Encoder(config=config)
         self.target_encoder = self.get_target_encoder()
