@@ -87,7 +87,7 @@ def parse_args():
     parser.add_argument('--p_augment_data',        type=float,    default=0)
     parser.add_argument('--p_flip',                type=float,    default=None)
     parser.add_argument('--p_noise',               type=float,    default=None) 
-    parser.add_argument('--rotate',                type=float,    default=None)
+    parser.add_argument('--p_rotate',                type=float,    default=None)
     parser.add_argument('--noise_std',             type=float,    default=0.05)
 
     # Optimizer

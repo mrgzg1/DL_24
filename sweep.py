@@ -13,7 +13,7 @@ def train_jepa(config=None):
         cmd = [
             "python", main_path,
             "--experiment_name", f"sweep_{wandb.run.id}",
-            "--data_path", "/data/DL_24/data",
+            "--data_path", "/data/dataset/DL2572",
             "--batch_size", str(config.batch_size),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
@@ -27,8 +27,8 @@ def train_jepa(config=None):
         if hasattr(config, 'p_noise') and config.p_noise is not None:
             cmd.extend(["--p_noise", str(config.p_noise)])
             
-        if hasattr(config, 'rotate') and config.rotate is not None:
-            cmd.extend(["--rotate", str(config.rotate)])
+        if hasattr(config, 'p_rotate') and config.rotate is not None:
+            cmd.extend(["--p_rotate", str(config.rotate)])
 
         cmd.extend([
             "--noise_std", str(config.noise_std),
@@ -58,8 +58,8 @@ sweep_configs = {
             'encoder_type': {'value': 'cnn'},
             'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
             'p_flip': {'value': 1.0},
-            'p_noise': {'value': None},
-            'rotate': {'value': None},
+            'p_noise': {'value': 0},
+            'p_rotate': {'value': 0},
             'noise_std': {'value': 0.05}
         }
     },
@@ -76,9 +76,9 @@ sweep_configs = {
             'epochs': {'value': 30},
             'encoder_type': {'value': 'cnn'},
             'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
-            'p_flip': {'value': None},
-            'p_noise': {'value': None},
-            'rotate': {'value': 1.0},
+            'p_flip': {'value': 0},
+            'p_noise': {'value': 0},
+            'p_rotate': {'value': 1.0},
             'noise_std': {'value': 0.05}
         }
     },
@@ -95,9 +95,9 @@ sweep_configs = {
             'epochs': {'value': 30},
             'encoder_type': {'value': 'cnn'},
             'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
-            'p_flip': {'value': None},
+            'p_flip': {'value': 0},
             'p_noise': {'value': 1.0},
-            'rotate': {'value': None},
+            'p_rotate': {'value': 0},
             'noise_std': {'values': [0.001, 0.005, 0.01, 0.05]}
         }
     },
@@ -116,7 +116,7 @@ sweep_configs = {
             'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
             'p_flip': {'value': None},
             'p_noise': {'value': None},
-            'rotate': {'value': None},
+            'p_rotate': {'value': None},
             'noise_std': {'value': 0.05}
         }
     }

@@ -63,7 +63,7 @@ def load_data_jepa(device, args):
         p_augment_data=args.p_augment_data,
         p_flip=args.p_flip,
         p_noise=args.p_noise,
-        p_rotate=args.rotate,
+        p_rotate=args.p_rotate,
         noise_std=args.noise_std
     )
 
