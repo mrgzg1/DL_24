@@ -40,10 +40,9 @@ class JEPA(nn.Module):
         self.n_steps = n_steps
         self.repr_dim = 256
         self.config = config
-        # self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim)
-        self.encoder = Encoder(n_kernels=4, repr_dim=config.repr_dim, config=config)
+        self.encoder = Encoder(config=config)
         self.target_encoder = self.get_target_encoder()
-        self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, 
+        self.predictor = Predictor(enc_dim=config.repr_dim, action_dim=action_dim, 
                                    arch=config.mlp_pred_arch, n_steps=n_steps, 
                                    norm_features=self.config.norm_features)
         self.get_num_params()
