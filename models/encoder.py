@@ -24,7 +24,7 @@ class Encoder(nn.Module):
         self.agent_encoder = self._get_backbone(config.encoder_type, "agent")
         self.fusion = nn.Linear(config.repr_dim*2, config.repr_dim)
 
-    def _get_backbone(self, backbone, for_who):
+    def _get_backbone(self, backbone, for_who="all"):
         if backbone == "cnn":
             return CNNBackbone(self.config.num_kernels, self.config.repr_dim, self.dropout, self.config.norm_features)
         elif backbone == "cnn-new":
