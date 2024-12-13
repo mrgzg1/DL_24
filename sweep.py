@@ -9,7 +9,6 @@ def train_jepa(config=None):
         
         # Get full path to main.py
         main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
-        
         # Construct command with sweep parameters
         cmd = [
             "python", main_path,
@@ -18,14 +17,25 @@ def train_jepa(config=None):
             "--batch_size", str(config.batch_size),
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
-            "--p_augment_data", str(config.p_augment_data),
-            "--p_flip", str(config.p_flip) if config.p_flip is not None else "None",
-            "--p_noise", str(config.p_noise) if config.p_noise is not None else "None",
-            "--rotate", str(config.rotate) if config.rotate is not None else "None",
+            "--p_augment_data", str(config.p_augment_data)
+        ]
+
+        # Only add optional args if explicitly set in config
+        if hasattr(config, 'p_flip') and config.p_flip is not None:
+            cmd.extend(["--p_flip", str(config.p_flip)])
+        
+        if hasattr(config, 'p_noise') and config.p_noise is not None:
+            cmd.extend(["--p_noise", str(config.p_noise)])
+            
+        if hasattr(config, 'rotate') and config.rotate is not None:
+            cmd.extend(["--rotate", str(config.rotate)])
+
+        cmd.extend([
             "--noise_std", str(config.noise_std),
             "--wandb_id", w_run.id
-        ]
+        ])
         
+        print(f"running: {cmd}")
         # Run the training script
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
