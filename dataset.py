@@ -5,7 +5,6 @@ import torch.multiprocessing as mp
 import numpy as np
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
-from prefetch_generator import BackgroundGenerator
 
 
 class WallSample(NamedTuple):
@@ -90,11 +89,6 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
     
     return aug_image, aug_action
 
-class DataLoaderX(DataLoader):
-    """Custom DataLoader that uses BackgroundGenerator for prefetching"""
-    def __iter__(self):
-        return BackgroundGenerator(super().__iter__())
-
 class WallDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -133,9 +127,7 @@ class WallDataset(torch.utils.data.Dataset):
         else:
             self.locations = None
 
-        print(f"Dataset size: {len(self.states)}")
-        print(f"States shape: {self.states.shape}")
-        print(f"Actions shape: {self.actions.shape}")
+        self._print_data_stats()
 
     def __len__(self):
         return len(self.states)
@@ -299,8 +291,8 @@ def create_wall_dataloader(
         noise_std=noise_std
     )
 
-    # Use custom DataLoader with background prefetching
-    loader = DataLoaderX(
+    # Use standard DataLoader without prefetching
+    loader = DataLoader(
         ds,
         batch_size=batch_size,
         shuffle=train,

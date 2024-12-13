@@ -56,9 +56,20 @@ class JEPA(nn.Module):
         num_predictor_params = sum(p.numel() for p in self.predictor.parameters())
 
         # Print in millions
+        # Log parameter counts both to console and wandb
         print(f"Number of parameters in encoder: {num_encoder_params/1e6}M")
-        print(f"Number of parameters in target encoder: {num_target_encoder_params/1e6}M")
+        print(f"Number of parameters in target encoder: {num_target_encoder_params/1e6}M") 
         print(f"Number of parameters in predictor: {num_predictor_params/1e6}M")
+        
+        try:
+            import wandb
+            wandb.log({
+                "params/encoder": num_encoder_params/1e6,
+                "params/target_encoder": num_target_encoder_params/1e6,
+                "params/predictor": num_predictor_params/1e6
+            })
+        except:
+            pass
 
 
         
