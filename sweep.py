@@ -27,8 +27,8 @@ def train_jepa(config=None):
         if hasattr(config, 'p_noise') and config.p_noise is not None:
             cmd.extend(["--p_noise", str(config.p_noise)])
             
-        if hasattr(config, 'p_rotate') and config.rotate is not None:
-            cmd.extend(["--p_rotate", str(config.rotate)])
+        if hasattr(config, 'p_rotate') and config.p_rotate is not None:
+            cmd.extend(["--p_rotate", str(config.p_rotate)])
 
         cmd.extend([
             "--noise_std", str(config.noise_std),

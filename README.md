@@ -161,6 +161,6 @@ python main.py \
     --p_augment_data 0.1 \
     --p_flip 1.0 \
     --p_noise 0 \
-    --rotate 0 \
+    --p_rotate 0 \
     --noise_std 0.05 \
     >> resources/$EXP_NAME.log 2>&1 &
