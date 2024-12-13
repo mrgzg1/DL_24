@@ -19,6 +19,9 @@ def train_jepa(config=None):
             "--epochs", str(config.epochs),
             "--encoder_type", config.encoder_type,
             "--p_augment_data", str(config.p_augment_data),
+            "--num_kernels", str(config.num_kernels),
+            "--repr_dim", str(config.repr_dim),
+            "--mlp_pred_arch", str(config.mlp_pred_arch),
             "--wandb_id", w_run.id
         ]
         
@@ -44,11 +47,21 @@ sweep_config = {
             'values': [20]
         },
         'encoder_type': {
-            'values': ['cnn']
+            'values': ['cnn', 'cnn-new']
         },
         'p_augment_data': {
             'values': [0, 0.01, 0.025, 0.05, 0.1]
-        }
+        },
+        # CNN specific
+        "num_kernels": {
+            'values': [4,8] #[2,4,8]
+        },
+        "repr_dim": {
+            'values': [256,128] #[128,256,512]
+        },
+        "mlp_pred_arch": {
+            'values': ['1024-512-256', '512-256-128']#[128,256,512]
+        },
     }
 }
 

@@ -21,12 +21,17 @@ class Encoder(nn.Module):
         self.dropout = dropout
         self.config = config
         self.wall_encoder = self._get_backbone(config.encoder_type)
-        self.agent_encoder = self._get_backbone(config.encoder_type)
-        self.fusion = nn.Linear(repr_dim*2, repr_dim)
+        self.agent_encoder = self._get_backbone(config.encoder_type, "agent")
+        self.fusion = nn.Linear(config.repr_dim*2, config.repr_dim)
 
-    def _get_backbone(self, backbone):
+    def _get_backbone(self, backbone, for_who):
         if backbone == "cnn":
             return CNNBackbone(self.config.num_kernels, self.config.repr_dim, self.dropout, self.config.norm_features)
+        elif backbone == "cnn-new":
+            if for_who == "agent":
+                return CNNBackbone(self.config.num_kernels//2, self.config.repr_dim, self.dropout, self.config.norm_features)
+            else:
+                return CNNBackbone(self.config.num_kernels, self.config.repr_dim, self.dropout, self.config.norm_features)
         elif backbone == "vit":
             return ViTBackbone(image_size=65, patch_size=16, 
                                in_channels=1, embed_dim=self.repr_dim, 
