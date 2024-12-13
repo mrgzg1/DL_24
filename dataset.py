@@ -173,14 +173,14 @@ class WallDataset(torch.utils.data.Dataset):
         print(f"States: {self.states.shape}")
         print(f"Actions: {self.actions.shape}")
 
-        # Print max and min pixel values
-        print(f"States max: {self.states.max()}")
+        # # Print max and min pixel values
+        # print(f"States max: {self.states.max()}")
 
-        # Print variance of pixel values
-        print(f"States variance: {self.states.var()}")
+        # # Print variance of pixel values
+        # print(f"States variance: {self.states.var()}")
 
-        # Print max and min action values
-        print(f"Actions max: {self.actions.max()}", f"Actions min: {self.actions.min()}")
+        # # Print max and min action values
+        # print(f"Actions max: {self.actions.max()}", f"Actions min: {self.actions.min()}")
         
         # Print augmentation parameters
         print("\nAugmentation parameters:")
