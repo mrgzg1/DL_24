@@ -112,9 +112,9 @@ class WallDataset(Dataset):
             locations = torch.from_numpy(self.locations[start_idx:end_idx]).float()
 
         # Move to GPU
-        self.data_cache["states"] = states.to(self.device, non_blocking=True)
-        self.data_cache["actions"] = actions.to(self.device, non_blocking=True)
-        self.data_cache["locations"] = locations.to(self.device, non_blocking=True) if locations is not None else None
+        self.data_cache["states"] = states.to(self.device)
+        self.data_cache["actions"] = actions.to(self.device)
+        self.data_cache["locations"] = locations.to(self.device) if locations is not None else None
         
         self.cache_start = start_idx
 
