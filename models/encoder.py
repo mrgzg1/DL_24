@@ -119,7 +119,7 @@ class ResidualLayer(nn.Module):
                 nn.BatchNorm2d(out_channels)
             )
 
-        self._init_weights()
+        #self._init_weights()
 
     def _init_weights(self):
         for m in self.modules():
