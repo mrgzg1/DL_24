@@ -65,7 +65,7 @@ def train_jepa(config=None):
             "--p_augment_data", str(config.p_augment_data)
         ]
 
-        # Only add optional args if explicitly set in config
+        # Add optional args if explicitly set in config
         if hasattr(config, 'p_flip') and config.p_flip is not None:
             print(f"Adding p_flip: {config.p_flip}")
             cmd.extend(["--p_flip", str(config.p_flip)])
@@ -77,6 +77,16 @@ def train_jepa(config=None):
         if hasattr(config, 'p_rotate') and config.p_rotate is not None:
             print(f"Adding p_rotate: {config.p_rotate}")
             cmd.extend(["--p_rotate", str(config.p_rotate)])
+
+        # Add architecture args from default config
+        if hasattr(config, 'num_kernels'):
+            cmd.extend(["--num_kernels", str(config.num_kernels)])
+            
+        if hasattr(config, 'repr_dim'):
+            cmd.extend(["--repr_dim", str(config.repr_dim)])
+            
+        if hasattr(config, 'mlp_pred_arch'):
+            cmd.extend(["--mlp_pred_arch", config.mlp_pred_arch])
 
         cmd.extend([
             "--noise_std", str(config.noise_std),
