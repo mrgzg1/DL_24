@@ -88,7 +88,6 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
             aug_image = add_gaussian_noise(aug_image, std=noise_std)
     
     return aug_image, aug_action
-
 class WallDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -99,80 +98,94 @@ class WallDataset(torch.utils.data.Dataset):
         p_flip=None,
         p_rotate=None,
         p_noise=None,
-        noise_std=0.05
+        noise_std=0.05,
+        cache_size=128,  # Number of samples to cache in GPU memory
     ):
         self.device = device
-        # Load data into memory if enough RAM is available
-        # Otherwise keep mmap_mode="r" for memory efficiency
-        try:
-            self.states = np.load(f"{data_path}/states.npy")  # Load fully into memory
-            self.actions = np.load(f"{data_path}/actions.npy")
-        except MemoryError:
-            print("Warning: Not enough memory to load dataset fully, using memory mapping")
-            self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-            self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
-            
-        self.apply_augs = True if p_aug > 0 else False
+        self.cache_size = cache_size  # Number of samples to cache
+        self.data_cache = {}  # Cached data storage
+        self.cache_start = 0  # Start index of the current cache
+
+        # Use memory mapping to handle large datasets
+        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+        self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
+
+        self.locations = None
+        if probing:
+            try:
+                self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
+            except FileNotFoundError:
+                print("Warning: locations.npy not found, skipping location loading.")
+
+        self.apply_augs = p_aug > 0
         self.p_aug = p_aug
         self.p_flip = p_flip
         self.p_rotate = p_rotate
         self.p_noise = p_noise
         self.noise_std = noise_std
 
-        if probing:
-            try:
-                self.locations = np.load(f"{data_path}/locations.npy")
-            except MemoryError:
-                self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
-        else:
-            self.locations = None
-
         self._print_data_stats()
 
     def __len__(self):
         return len(self.states)
 
+    def _load_to_cache(self, start_idx):
+        """Load a subset of data into GPU memory."""
+        end_idx = min(start_idx + self.cache_size, len(self.states))
+        states = torch.from_numpy(self.states[start_idx:end_idx]).float()
+        actions = torch.from_numpy(self.actions[start_idx:end_idx]).float()
+
+        locations = (
+            torch.from_numpy(self.locations[start_idx:end_idx]).float()
+            if self.locations is not None
+            else None
+        )
+
+        # Move to GPU if device is CUDA
+        self.data_cache = {
+            "states": states.to(self.device),
+            "actions": actions.to(self.device),
+            "locations": locations.to(self.device) if locations is not None else None,
+        }
+        self.cache_start = start_idx
+
     def __getitem__(self, i):
-        states = torch.from_numpy(self.states[i].copy()).float()  # Copy to avoid mmap issues
-        actions = torch.from_numpy(self.actions[i].copy()).float()
+        # Ensure the requested index is in the cache
+        if not (self.cache_start <= i < self.cache_start + self.cache_size):
+            self._load_to_cache(i)
 
+        cache_idx = i - self.cache_start
+        states = self.data_cache["states"][cache_idx]
+        actions = self.data_cache["actions"][cache_idx]
+        locations = (
+            self.data_cache["locations"][cache_idx]
+            if self.data_cache["locations"] is not None
+            else torch.empty(0, device=self.device)
+        )
+
+        # Apply augmentations if required
         if self.apply_augs:
-            states, actions = apply_augmentations(states, actions, 
-                                                p_aug=self.p_aug,
-                                                p_hflip=self.p_flip,
-                                                p_vflip=self.p_flip,
-                                                p_rot90=self.p_rotate,
-                                                p_noise=self.p_noise,
-                                                noise_std=self.noise_std)
+            states, actions = apply_augmentations(
+                states,
+                actions,
+                p_aug=self.p_aug,
+                p_hflip=self.p_flip,
+                p_vflip=self.p_flip,
+                p_rot90=self.p_rotate,
+                p_noise=self.p_noise,
+                noise_std=self.noise_std,
+            )
 
-        if self.locations is not None:
-            locations = torch.from_numpy(self.locations[i].copy()).float()
-        else:
-            locations = torch.empty(0)
-
-        sample = WallSample(states=states, locations=locations, actions=actions)
-        
-        # Move to GPU if required
-        if self.device == "cuda":
-            sample = WallSample(*(t.cuda() for t in sample))
-
-        return sample
+        return WallSample(states=states, locations=locations, actions=actions)
 
     def _print_data_stats(self):
         print("Data statistics:")
         print(f"States: {self.states.shape}")
         print(f"Actions: {self.actions.shape}")
 
-        # # Print max and min pixel values
-        # print(f"States max: {self.states.max()}")
+        if self.locations is not None:
+            print(f"Locations: {self.locations.shape}")
 
-        # # Print variance of pixel values
-        # print(f"States variance: {self.states.var()}")
-
-        # # Print max and min action values
-        # print(f"Actions max: {self.actions.max()}", f"Actions min: {self.actions.min()}")
-        
-        # Print augmentation parameters
         print("\nAugmentation parameters:")
         print(f"Apply augmentations: {self.apply_augs}")
         if self.apply_augs:
@@ -183,15 +196,11 @@ class WallDataset(torch.utils.data.Dataset):
             print(f"noise_std: {self.noise_std}")
         print()
 
-    # Display a trajectory of observations using matplotlib
     def display_trajectory(self, i):
-        states = self.states[i].cpu().numpy()
-        actions = self.actions[i].cpu().numpy()
+        """Visualize a trajectory of observations."""
+        states = torch.from_numpy(self.states[i]).cpu().numpy()
+        actions = torch.from_numpy(self.actions[i]).cpu().numpy()
 
-        # Image has 2 channel dimension. Overlay the two images to get the final image
-        # The first channel is the wall image and the second channel is the agent image
-
-        # Display the trajectory of the agent
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
         ax.set_title("Trajectory of the agent")
         ax.set_xlabel("x")
@@ -199,25 +208,19 @@ class WallDataset(torch.utils.data.Dataset):
 
         for t in range(states.shape[0]):
             state = states[t]
-    
+
             # Display the wall image
             wall_image = state[0]
-            # Print max and min pixel values and average pixel value
-            print(f"Wall image max: {wall_image.max()}", f"Wall image min: {wall_image.min()}", f"Wall image mean: {wall_image.mean()}")
             ax.imshow(wall_image, cmap="gray")
 
-            # Display the agent image
+            # Overlay the agent image
             agent_image = state[1]
-            # Print max and min pixel values
-            # print(f"Agent image max: {agent_image.max()}", f"Agent image min: {agent_image.min()}", f"Agent image mean: {agent_image.mean()}")
             ax.imshow(agent_image, cmap="jet", alpha=0.5)
-            
+
             plt.pause(0.5)
             plt.draw()
-            
-        plt.show()
 
-        # Kill the plot
+        plt.show()
         plt.close()
 
 def create_small_dataset(data_path, n, output_path, seed=42):
@@ -288,7 +291,8 @@ def create_wall_dataloader(
         p_flip=p_flip,
         p_rotate=p_rotate,
         p_noise=p_noise,
-        noise_std=noise_std
+        noise_std=noise_std,
+        cache_size=batch_size*32
     )
 
     loader = DataLoader(
