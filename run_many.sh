@@ -1,27 +1,53 @@
 #!/bin/bash
 
-# Ensure PROJ_NAME and SWEEP_ID are set
-if [ -z "$PROJ_NAME" ] || [ -z "$SWEEP_ID" ]; then
-    echo "Error: PROJ_NAME and SWEEP_ID must be set"
+# Number of agents to run per GPU
+NUM_PER_GPU=2
+
+# Ensure PROJ_NAME and experiment type are set
+if [ -z "$PROJ_NAME" ] || [ -z "$EXP_TYPE" ]; then
+    echo "Error: PROJ_NAME and EXP_TYPE must be set"
     exit 1
 fi
 
 # Create logs directory if it doesn't exist
 mkdir -p resources/logs
 
-# Run 3 agents per GPU across 8 GPUs (24 total agents)
-CUDA_VISIBLE_DEVICES=1 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_1_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=2 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_2_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=3 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_3_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=4 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_4_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=5 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_5_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=6 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_6_1.log 2>&1 &
- 
-CUDA_VISIBLE_DEVICES=7 python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_7_1.log 2>&1 &
+# Start initial sweep process in background and capture its log file
+INIT_LOG="resources/logs/init_sweep.log"
+python sweep.py --project_name $PROJ_NAME --experiment_type $EXP_TYPE > $INIT_LOG 2>&1 &
+INIT_PID=$!
+
+# Wait up to 60 seconds and monitor log for sweep ID
+SWEEP_ID=""
+COUNTER=0
+while [ $COUNTER -lt 60 ]; do
+    if [ -f $INIT_LOG ]; then
+        SWEEP_ID=$(grep -o 'Created sweep for .* with ID:.*' $INIT_LOG | awk '{print $NF}')
+        if [ ! -z "$SWEEP_ID" ]; then
+            echo "Captured sweep ID: $SWEEP_ID"
+            break
+        fi
+    fi
+    sleep 1
+    ((COUNTER++))
+done
+
+# Kill initial process since we have the sweep ID
+kill $INIT_PID 2>/dev/null
+echo "Init PID: $INIT_PID was killed"
+
+if [ -z "$SWEEP_ID" ]; then
+    echo "Error: Failed to get sweep ID within 60 seconds"
+    exit 1
+fi
+
+# Run agents across GPUs using the captured sweep ID
+for AGENT in $(seq 1 $NUM_PER_GPU); do
+    for GPU in {1..7}; do
+        CUDA_VISIBLE_DEVICES=$GPU python sweep.py --sweep_id $SWEEP_ID --project_name $PROJ_NAME > resources/logs/${SWEEP_ID}_${GPU}_${AGENT}.log 2>&1 &
+        echo "Started agent $AGENT on GPU $GPU, sleeping for 10"
+        sleep 10
+    done
+done
 
 wait # Wait for all background processes to complete
