@@ -20,7 +20,7 @@ echo "$INIT_PID, $INIT_LOG"
 # Wait up to 60 seconds and monitor log for sweep ID
 SWEEP_ID=""
 COUNTER=0
-while [ $COUNTER -lt 60 ]; do
+while [ $COUNTER -lt 10 ]; do
     if [ -f $INIT_LOG ]; then
         SWEEP_ID=$(grep -o 'Created sweep for .* with ID:.*' $INIT_LOG | awk '{print $NF}')
 	if [ ! -z "$SWEEP_ID" ]; then
