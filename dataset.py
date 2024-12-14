@@ -93,6 +93,8 @@ class WallDataset(Dataset):
         self.p_noise = p_noise
         self.noise_std = noise_std
 
+        # Initialize cache with first batch
+        self._load_to_cache(0)
         self._print_data_stats()
 
     def __len__(self):
