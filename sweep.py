@@ -105,95 +105,22 @@ def train_jepa(config=None):
 
 # Define sweep configuration
 sweep_configs = {
-    # Experiment Set 1: Only flips
-    'flip_only': {
-        'method': 'grid',
-        'metric': {
-            'name': 'eval/combined_loss',
-            'goal': 'minimize'
-        },
-        'parameters': {
-            'batch_size': {'value': 256},
-            'epochs': {'value': 30},
-            'encoder_type': {'value': 'cnn'},
-            'p_augment_data': {'values': [0.3, 0.5]},
-            'p_flip': {'value': 1.0},
-            'p_noise': {'value': 0},
-            'p_rotate': {'value': 0},
-            'noise_std': {'value': 0.05}
-        }
-    },
     # Default experiment with all augmentations enabled
-'default': {
-  'method': 'grid',
-  'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
-  'parameters': {
-    'batch_size': {'values': [256,512]}, # from initial preference
-    'epochs': {'value': 20},
-    'encoder_type': {'value': 'cnn'},
-    'num_kernels': {'values': [4,8,16,32]}, # narrower range based on initial insights
-    'repr_dim': {'values': [512, 1024]},
-    'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
-    'p_augment_data': {'values': [0, 0.4, 0.6]},
-    'noise_std': {'value': 0.02}
-  }
-},
-    'rotate_only': {
+    'default': {
         'method': 'grid',
-        'metric': {
-            'name': 'eval/combined_loss',
-            'goal': 'minimize'
-        },
+        'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
         'parameters': {
-            'batch_size': {'value': 256},
-            'epochs': {'value': 30},
+            'batch_size': {'values': [256,512]}, # from initial preference
+            'epochs': {'value': 50},
             'encoder_type': {'value': 'cnn'},
-            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
-            'p_flip': {'value': 0},
-            'p_noise': {'value': 0},
-            'p_rotate': {'value': 1.0},
-            'noise_std': {'values': [0.01,0.03]}
+            'num_kernels': {'values': [8,16,32]}, # narrower range based on initial insights
+            'repr_dim': {'values': [128, 256, 512]},
+            'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
+            'p_augment_data': {'values': [0, 0.1, 0.4, 0.6]},
+            'noise_std': {'value': 0.01}
         }
     },
-    
-    # Experiment Set 3: Only noise with varying std
-    'noise_only': {
-        'method': 'grid',
-        'metric': {
-            'name': 'eval/combined_loss',
-            'goal': 'minimize'
-        },
-        'parameters': {
-            'batch_size': {'value': 256},
-            'epochs': {'value': 30},
-            'encoder_type': {'value': 'cnn'},
-            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
-            'p_flip': {'value': 0},
-            'p_noise': {'value': 1.0},
-            'p_rotate': {'value': 0},
-            'noise_std': {'values': [0.001, 0.005, 0.01, 0.05]}
-        }
-    },
-    
-    # Experiment Set 4: All augmentations together
-    'all_augs': {
-        'method': 'grid',
-        'metric': {
-            'name': 'eval/combined_loss',
-            'goal': 'minimize'
-        },
-        'parameters': {
-            'batch_size': {'value': 256},
-            'epochs': {'value': 30},
-            'encoder_type': {'value': 'cnn'},
-            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
-            'p_flip': {'value': None},
-            'p_noise': {'value': None},
-            'p_rotate': {'value': None},
-            'noise_std': {'value': 0.05}
-        }
-    }
-}
+ }
 
 def create_sweep(project_name, experiment_type):
     if experiment_type not in sweep_configs:
