@@ -1,0 +1,18 @@
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Agent Starting Run: th28xzvf with config:
+wandb:  batch_size: 128
+wandb:  encoder_type: cnn
+wandb:  epochs: 60
+wandb:  mlp_pred_arch: 1024-512-256
+wandb:  noise_std: 0.05
+wandb:  num_kernels: 4
+wandb:  p_augment_data: 0
+wandb:  repr_dim: 256
+wandb: Currently logged in as: gandhiji (gandhiji-u). Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.0
+wandb: Run data is saved locally in /data/DL_24/wandb/run-20241214_053349-th28xzvf
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run giddy-sweep-1
+wandb: ⭐️ View project at https://wandb.ai/gandhiji-u/wall_jepa_sweep
+wandb: 🧹 View sweep at https://wandb.ai/gandhiji-u/wall_jepa_sweep/sweeps/mce6hu9y
+wandb: 🚀 View run at https://wandb.ai/gandhiji-u/wall_jepa_sweep/runs/th28xzvf
