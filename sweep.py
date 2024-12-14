@@ -128,13 +128,13 @@ sweep_configs = {
   'method': 'grid',
   'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
   'parameters': {
-    'batch_size': {'value': [256,512]}, # from initial preference
+    'batch_size': {'values': [256,512]}, # from initial preference
     'epochs': {'value': 20},
-    'encoder_type': {'value': 'cnn-new'},
+    'encoder_type': {'value': 'cnn'},
     'num_kernels': {'values': [4,8,16,32]}, # narrower range based on initial insights
     'repr_dim': {'values': [512, 1024]},
     'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
-    'p_augment_data': {'value': [0, 0.4, 0.6]},
+    'p_augment_data': {'values': [0, 0.4, 0.6]},
     'noise_std': {'value': 0.02}
   }
 },
