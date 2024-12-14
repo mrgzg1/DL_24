@@ -2,8 +2,45 @@ import wandb
 import subprocess
 import math
 import os
+import torch
+import sys
+
+def print_gpu_info():
+    # Print CUDA_VISIBLE_DEVICES env var
+    cuda_devices = os.environ.get('CUDA_VISIBLE_DEVICES')
+    print(f"CUDA_VISIBLE_DEVICES: {cuda_devices}")
+
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            device = torch.cuda.get_device_properties(i)
+            print(f"GPU {i}: {device.name}")
+            print(f"  Total memory: {device.total_memory / 1024**3:.1f} GB")
+            print(f"  Compute capability: {device.major}.{device.minor}")
+    else:
+        print("No CUDA GPUs available")
+
+def check_gpu_requirements():
+    if not torch.cuda.is_available():
+        print("Error: No CUDA device available")
+        sys.exit(1)
+        
+    # Check memory on first GPU
+    device = torch.cuda.get_device_properties(0)
+    memory_gb = device.total_memory / 1024**3
+    
+    if memory_gb < 10:
+        print(f"Error: GPU has only {memory_gb:.1f}GB memory, need at least 10GB")
+        sys.exit(1)
 
 def train_jepa(config=None):
+    # Check GPU requirements first
+    check_gpu_requirements()
+    
+    # Print GPU info at start of training
+    print("\nGPU Information:")
+    print_gpu_info()
+    print()
+    
     with wandb.init(config=config) as w_run:
         config = wandb.config
         
@@ -177,5 +214,13 @@ if __name__ == "__main__":
                       choices=['flip_only', 'rotate_only', 'noise_only', 'all_augs', 'default'],
                       help='Type of experiment to run')
     args = parser.parse_args()
+    
+    # Check GPU requirements before starting
+    check_gpu_requirements()
+    
+    # Print GPU info before starting agent
+    print("\nAvailable GPU Information:")
+    print_gpu_info()
+    print()
     
     start_agent(args.project_name, args.experiment_type, args.sweep_id)
