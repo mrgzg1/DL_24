@@ -236,7 +236,7 @@ def create_wall_dataloader(
         p_rotate=p_rotate,
         p_noise=p_noise,
         noise_std=noise_std,
-        cache_size=batch_size * 64
+        cache_size=batch_size*4
     )
 
     loader = DataLoader(
