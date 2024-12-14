@@ -1,11 +1,11 @@
 __pycache__/
 */__pycache__/
 **/__pycache__/
-
+.DS_STORE
 .ipynb_checkpoints
 */.ipynb_checkpoints
 **/.ipynb_checkpoints
 wandb/
 data/
-
+artifacts/
 resources/

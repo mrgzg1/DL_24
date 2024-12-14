@@ -56,15 +56,31 @@ sweep_configs = {
             'batch_size': {'value': 256},
             'epochs': {'value': 30},
             'encoder_type': {'value': 'cnn'},
-            'p_augment_data': {'values': [0.01, 0.05, 0.1, 0.3]},
+            'p_augment_data': {'values': [0.3, 0.5]},
             'p_flip': {'value': 1.0},
             'p_noise': {'value': 0},
             'p_rotate': {'value': 0},
             'noise_std': {'value': 0.05}
         }
     },
-    
-    # Experiment Set 2: Only rotations
+    # Default experiment with all augmentations enabled
+    'default': {
+        'method': 'grid',
+        'metric': {
+            'name': 'eval/combined_loss',
+            'goal': 'minimize'
+        },
+        'parameters': {
+            'batch_size': {'values': [128,256,512]},
+            'epochs': {'value': 60},
+            'encoder_type': {'values': ['cnn', 'cnn-new']},
+            'num_kernels': {'values': [4, 8, 16, 32]},
+            'repr_dim': {'values': [256, 512, 1024]},
+            'mlp_pred_arch': {'values': ['1024-512-256', '1024-1024-512']},
+            'p_augment_data': {'values': [0, 0.3, 0.4, 0.5, 0.6]},
+            'noise_std': {'value': 0.05}
+        }
+    },
     'rotate_only': {
         'method': 'grid',
         'metric': {
@@ -144,7 +160,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--sweep_id', type=str, help='Optional: ID of existing sweep to run')
     parser.add_argument('--project_name', type=str, default='wall_jepa_sweep', help='W&B project name')
-    parser.add_argument('--experiment_type', type=str, required=True, 
+    parser.add_argument('--experiment_type', type=str, default="default",
                       choices=['flip_only', 'rotate_only', 'noise_only', 'all_augs'],
                       help='Type of experiment to run')
     args = parser.parse_args()
