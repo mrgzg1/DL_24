@@ -155,7 +155,7 @@ sweep_configs = {
             'p_flip': {'value': 0},
             'p_noise': {'value': 0},
             'p_rotate': {'value': 1.0},
-            'noise_std': {'value': 0.05}
+            'noise_std': {'values': [0.01,0.03]}
         }
     },
     
