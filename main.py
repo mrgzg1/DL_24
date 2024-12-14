@@ -107,6 +107,8 @@ def load_model_weights(model, path, device):
 if __name__ == "__main__":
     args = parse_args()
     CONFIG = args
+    if not args.experiment_name or args.experiment_name == "":
+        raise Exception("WEF")
 
     # Initialize wandb
     if args.wandb_id is None:

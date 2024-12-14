@@ -9,10 +9,18 @@ def train_jepa(config=None):
         
         # Get full path to main.py
         main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
+        
+        # Ensure we have a valid run ID for experiment name
+        if not wandb.run.id:
+            raise ValueError("No wandb run ID available")
+            
+        experiment_name = f"sweep_{wandb.run.id}"
+        print(f"Using experiment name: {experiment_name}")
+        
         # Construct command with sweep parameters
         cmd = [
             "python", main_path,
-            "--experiment_name", f"sweep_{wandb.run.id}",
+            "--experiment_name", experiment_name,
             "--data_path", "/data/dataset/DL2572",
             "--batch_size", str(config.batch_size),
             "--epochs", str(config.epochs),
@@ -22,12 +30,15 @@ def train_jepa(config=None):
 
         # Only add optional args if explicitly set in config
         if hasattr(config, 'p_flip') and config.p_flip is not None:
+            print(f"Adding p_flip: {config.p_flip}")
             cmd.extend(["--p_flip", str(config.p_flip)])
         
         if hasattr(config, 'p_noise') and config.p_noise is not None:
+            print(f"Adding p_noise: {config.p_noise}")
             cmd.extend(["--p_noise", str(config.p_noise)])
             
         if hasattr(config, 'p_rotate') and config.p_rotate is not None:
+            print(f"Adding p_rotate: {config.p_rotate}")
             cmd.extend(["--p_rotate", str(config.p_rotate)])
 
         cmd.extend([
@@ -35,13 +46,15 @@ def train_jepa(config=None):
             "--wandb_id", w_run.id
         ])
         
-        print(f"running: {cmd}")
+        print(f"Running command: {' '.join(cmd)}")
         # Run the training script
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         
         if process.returncode != 0:
-            print(f"Error running training: {stderr.decode()}")
+            print(f"Error running training command: {' '.join(cmd)}")
+            print(f"Error output:\n{stderr.decode()}")
+            print(f"Standard output:\n{stdout.decode()}")
 
 # Define sweep configuration
 sweep_configs = {
