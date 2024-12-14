@@ -23,7 +23,7 @@ COUNTER=0
 while [ $COUNTER -lt 60 ]; do
     if [ -f $INIT_LOG ]; then
         SWEEP_ID=$(grep -o 'Created sweep for .* with ID:.*' $INIT_LOG | awk '{print $NF}')
-        if [ ! -z "$SWEEP_ID" ]; then
+	if [ ! -z "$SWEEP_ID" ]; then
             echo "Captured sweep ID: $SWEEP_ID"
             break
         fi
