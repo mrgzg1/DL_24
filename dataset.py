@@ -57,7 +57,6 @@ def add_gaussian_noise(image, std=0.05):
     return aug_image
 
 
-
 def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
     """Apply all augmentations with given probabilities for the entire trajectory"""
     aug_image = image
@@ -88,6 +87,7 @@ def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_
             aug_image = add_gaussian_noise(aug_image, std=noise_std)
     
     return aug_image, aug_action
+
 class WallDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -106,14 +106,14 @@ class WallDataset(torch.utils.data.Dataset):
         self.data_cache = {}  # Cached data storage
         self.cache_start = 0  # Start index of the current cache
 
-        # Use memory mapping to handle large datasets
-        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-        self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
+        # Load data into memory first, then convert to tensor
+        self.states = torch.from_numpy(np.array(np.load(f"{data_path}/states.npy", mmap_mode="r"))).float()
+        self.actions = torch.from_numpy(np.array(np.load(f"{data_path}/actions.npy", mmap_mode="r"))).float()
 
         self.locations = None
         if probing:
             try:
-                self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
+                self.locations = torch.from_numpy(np.array(np.load(f"{data_path}/locations.npy", mmap_mode="r"))).float()
             except FileNotFoundError:
                 print("Warning: locations.npy not found, skipping location loading.")
 
@@ -132,14 +132,10 @@ class WallDataset(torch.utils.data.Dataset):
     def _load_to_cache(self, start_idx):
         """Load a subset of data into GPU memory."""
         end_idx = min(start_idx + self.cache_size, len(self.states))
-        states = torch.from_numpy(self.states[start_idx:end_idx]).float()
-        actions = torch.from_numpy(self.actions[start_idx:end_idx]).float()
+        states = self.states[start_idx:end_idx]
+        actions = self.actions[start_idx:end_idx]
 
-        locations = (
-            torch.from_numpy(self.locations[start_idx:end_idx]).float()
-            if self.locations is not None
-            else None
-        )
+        locations = self.locations[start_idx:end_idx] if self.locations is not None else None
 
         # Move to GPU if device is CUDA
         self.data_cache = {
@@ -198,8 +194,8 @@ class WallDataset(torch.utils.data.Dataset):
 
     def display_trajectory(self, i):
         """Visualize a trajectory of observations."""
-        states = torch.from_numpy(self.states[i]).cpu().numpy()
-        actions = torch.from_numpy(self.actions[i]).cpu().numpy()
+        states = self.states[i].cpu().numpy()
+        actions = self.actions[i].cpu().numpy()
 
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
         ax.set_title("Trajectory of the agent")
