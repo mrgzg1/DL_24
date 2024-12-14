@@ -22,7 +22,14 @@ class Encoder(nn.Module):
         self.config = config
         self.wall_encoder = self._get_backbone(config.encoder_type)
         self.agent_encoder = self._get_backbone(config.encoder_type, "agent")
-        self.fusion = nn.Linear(config.repr_dim*2, config.repr_dim)
+        self.repr_dim = config.repr_dim
+        #self.fusion = nn.Linear(config.repr_dim*2, config.repr_dim)
+        self.fusion = nn.Sequential(
+                        nn.Flatten(),
+                        nn.Linear(in_features=config.repr_dim*2, out_features=config.repr_dim*4, bias=True),
+                        nn.Dropout(p=self.dropout),
+                        nn.ReLU(),
+                        nn.Linear(in_features=self.repr_dim*4, out_features=self.repr_dim, bias=True))
 
     def _get_backbone(self, backbone, for_who="all"):
         if backbone == "cnn":
@@ -45,27 +52,6 @@ class Encoder(nn.Module):
         agent_repr = self.agent_encoder(x[:, 1].unsqueeze(1))
         x = torch.cat((wall_repr, agent_repr), dim=-1)
         x = self.fusion(x)
-        return x
-
-
-################# ResNet Encoder ####################
-class ResNetEncoder(nn.Module):
-    def __init__(self, enc_dim):
-        super(ResNetEncoder, self).__init__()
-
-        self.enc_dim = enc_dim
-        # Modify the first convolution layer to accept 2 channels
-        self.resnet = resnet18(pretrained=False)
-        self.resnet.conv1 = nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        # Modify the output layer to output enc_dim features
-        self.resnet.fc = nn.Linear(512, enc_dim)
-        
-    def forward(self, x):
-        
-        x = self.resnet(x)
-        # Normalize the output
-        x = F.normalize(x, dim=-1)
-        
         return x
 
 ################ CNN Backbone ####################
