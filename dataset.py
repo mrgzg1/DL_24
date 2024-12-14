@@ -58,7 +58,7 @@ def add_gaussian_noise(image, std=0.05):
 
 
 
-def apply_augmentations(image, action, p_aug=0.5, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
+def apply_augmentations(image, action, p_aug=0, p_hflip=None, p_vflip=None, p_rot90=None, p_noise=None, noise_std=0.05):
     """Apply all augmentations with given probabilities for the entire trajectory"""
     aug_image = image
     aug_action = action

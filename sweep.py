@@ -106,18 +106,69 @@ def train_jepa(config=None):
 # Define sweep configuration
 sweep_configs = {
     # Default experiment with all augmentations enabled
-    'default': {
+    'baseline': {
         'method': 'grid',
         'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
         'parameters': {
-            'batch_size': {'values': [256,512]}, # from initial preference
+            'batch_size': {'values': [256]}, # from initial preference
             'epochs': {'value': 50},
             'encoder_type': {'value': 'cnn'},
-            'num_kernels': {'values': [8,16,32]}, # narrower range based on initial insights
-            'repr_dim': {'values': [128, 256, 512]},
+            'num_kernels': {'values': [8,16]}, # narrower range based on initial insights
+            'repr_dim': {'values': [512]},
             'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
-            'p_augment_data': {'values': [0, 0.1, 0.4, 0.6]},
-            'noise_std': {'value': 0.01}
+            'p_augment_data': {'values': [0]},
+        }
+    },
+    # Experiment with only flip augmentation
+    'flip_only': {
+        'method': 'grid',
+        'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
+        'parameters': {
+            'batch_size': {'values': [256]},
+            'epochs': {'value': 50},
+            'encoder_type': {'value': 'cnn'},
+            'num_kernels': {'values': [8,16]},
+            'repr_dim': {'values': [512]},
+            'mlp_pred_arch': {'value': '1024-512-256'},
+            'p_augment_data': {'values': [0.2, 0.4, 0.7]},
+            'p_flip': {'value': 1.0},
+            'p_noise': {'value': 0},
+            'p_rotate': {'value': 0},
+        }
+    },
+    # Experiment with only noise augmentation
+    'noise_only': {
+        'method': 'grid',
+        'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
+        'parameters': {
+            'batch_size': {'values': [256]},
+            'epochs': {'value': 50},
+            'encoder_type': {'value': 'cnn'},
+            'num_kernels': {'values': [8,16]},
+            'repr_dim': {'values': [512]},
+            'mlp_pred_arch': {'value': '1024-512-256'},
+            'p_augment_data': {'values': [0.2, 0.4, 0.7]},
+            'p_flip': {'value': 0},
+            'p_noise': {'value': 1.0},
+            'p_rotate': {'value': 0},
+            'noise_std': {'values': [0.01,0.02,0.05]},
+        }
+    },
+    # Experiment with only rotation augmentation
+    'rotate_only': {
+        'method': 'grid',
+        'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
+        'parameters': {
+            'batch_size': {'values': [256]},
+            'epochs': {'value': 50},
+            'encoder_type': {'value': 'cnn'},
+            'num_kernels': {'values': [8,16]},
+            'repr_dim': {'values': [512]},
+            'mlp_pred_arch': {'value': '1024-512-256'},
+            'p_augment_data': {'values': [0.2, 0.4, 0.7]},
+            'p_flip': {'value': 0},
+            'p_noise': {'value': 0},
+            'p_rotate': {'value': 1.0},
         }
     },
  }
