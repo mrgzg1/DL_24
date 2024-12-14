@@ -104,8 +104,13 @@ class WallDataset(torch.utils.data.Dataset):
         self.device = device
         # Load data into memory if enough RAM is available
         # Otherwise keep mmap_mode="r" for memory efficiency
-        self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
-        self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
+        try:
+            self.states = np.load(f"{data_path}/states.npy")  # Load fully into memory
+            self.actions = np.load(f"{data_path}/actions.npy")
+        except MemoryError:
+            print("Warning: Not enough memory to load dataset fully, using memory mapping")
+            self.states = np.load(f"{data_path}/states.npy", mmap_mode="r")
+            self.actions = np.load(f"{data_path}/actions.npy", mmap_mode="r")
             
         self.apply_augs = True if p_aug > 0 else False
         self.p_aug = p_aug
@@ -115,7 +120,10 @@ class WallDataset(torch.utils.data.Dataset):
         self.noise_std = noise_std
 
         if probing:
-            self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
+            try:
+                self.locations = np.load(f"{data_path}/locations.npy")
+            except MemoryError:
+                self.locations = np.load(f"{data_path}/locations.npy", mmap_mode="r")
         else:
             self.locations = None
 
