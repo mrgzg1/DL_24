@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torchvision.models import resnet18, resnet34, resnet50
 from torch.nn import functional as F
 import math
 
