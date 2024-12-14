@@ -16,7 +16,7 @@ mkdir -p resources/logs
 INIT_LOG="resources/logs/init_sweep.log"
 python sweep.py --project_name $PROJ_NAME --experiment_type $EXP_TYPE > $INIT_LOG 2>&1 &
 INIT_PID=$!
-
+echo "$INIT_PID, $INIT_LOG"
 # Wait up to 60 seconds and monitor log for sweep ID
 SWEEP_ID=""
 COUNTER=0
