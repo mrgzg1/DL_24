@@ -117,6 +117,8 @@ sweep_configs = {
             'repr_dim': {'values': [512]},
             'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
             'p_augment_data': {'values': [0]},
+            'noise_std': {'value': 0.05},
+
         }
     },
     # Experiment with only flip augmentation
@@ -134,6 +136,8 @@ sweep_configs = {
             'p_flip': {'value': 1.0},
             'p_noise': {'value': 0},
             'p_rotate': {'value': 0},
+            'noise_std': {'value': 0.05},
+
         }
     },
     # Experiment with only noise augmentation
@@ -169,6 +173,7 @@ sweep_configs = {
             'p_flip': {'value': 0},
             'p_noise': {'value': 0},
             'p_rotate': {'value': 1.0},
+            'noise_std': {'value': 0.05},
         }
     },
  }
