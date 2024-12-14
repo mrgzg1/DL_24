@@ -131,14 +131,14 @@ sweep_configs = {
             'goal': 'minimize'
         },
         'parameters': {
-            'batch_size': {'values': [128,256,512]},
+            'batch_size': {'values': [256,512, 128]},
             'epochs': {'value': 60},
             'encoder_type': {'values': ['cnn', 'cnn-new']},
             'num_kernels': {'values': [4, 8, 16, 32]},
             'repr_dim': {'values': [256, 512, 1024]},
             'mlp_pred_arch': {'values': ['1024-512-256', '1024-1024-512']},
-            'p_augment_data': {'values': [0, 0.3, 0.4, 0.5, 0.6]},
-            'noise_std': {'value': 0.05}
+            'p_augment_data': {'values': [0, 0.3, 0.5, 0.7]},
+            'noise_std': {'value': 0.02}
         }
     },
     'rotate_only': {
