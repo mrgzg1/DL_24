@@ -68,7 +68,11 @@ class WallDataset(Dataset):
     ):
         self.device = device
         self.cache_size = cache_size
-        self.data_cache = {}
+        self.data_cache = {
+            "states": None,
+            "actions": None,
+            "locations": None
+        }
         self.cache_start = 0
 
         # Memory-map the data to avoid loading it all into CPU memory at once
@@ -106,11 +110,10 @@ class WallDataset(Dataset):
             locations = torch.from_numpy(self.locations[start_idx:end_idx]).float()
 
         # Move to GPU
-        self.data_cache = {
-            "states": states.to(self.device, non_blocking=True),
-            "actions": actions.to(self.device, non_blocking=True),
-            "locations": locations.to(self.device, non_blocking=True) if locations is not None else None,
-        }
+        self.data_cache["states"] = states.to(self.device, non_blocking=True)
+        self.data_cache["actions"] = actions.to(self.device, non_blocking=True)
+        self.data_cache["locations"] = locations.to(self.device, non_blocking=True) if locations is not None else None
+        
         self.cache_start = start_idx
 
     def __getitem__(self, i):
