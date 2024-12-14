@@ -245,8 +245,8 @@ def create_wall_dataloader(
         shuffle=train,
         drop_last=True,
         pin_memory=True,
-        num_workers=4,
-        persistent_workers=True
+        # num_workers=4,
+        # persistent_workers=True
     )
 
     return loader
