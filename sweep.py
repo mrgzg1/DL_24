@@ -124,23 +124,20 @@ sweep_configs = {
         }
     },
     # Default experiment with all augmentations enabled
-    'default': {
-        'method': 'grid',
-        'metric': {
-            'name': 'eval/combined_loss',
-            'goal': 'minimize'
-        },
-        'parameters': {
-            'batch_size': {'values': [256,512, 128]},
-            'epochs': {'value': 60},
-            'encoder_type': {'values': ['cnn', 'cnn-new']},
-            'num_kernels': {'values': [4, 8, 16, 32]},
-            'repr_dim': {'values': [256, 512, 1024]},
-            'mlp_pred_arch': {'values': ['1024-512-256', '1024-1024-512']},
-            'p_augment_data': {'values': [0, 0.3, 0.5, 0.7]},
-            'noise_std': {'value': 0.02}
-        }
-    },
+'default': {
+  'method': 'grid',
+  'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
+  'parameters': {
+    'batch_size': {'value': [256,512]}, # from initial preference
+    'epochs': {'value': 20},
+    'encoder_type': {'value': 'cnn-new'},
+    'num_kernels': {'values': [4,8,16,32]}, # narrower range based on initial insights
+    'repr_dim': {'values': [512, 1024]},
+    'mlp_pred_arch': {'value': '1024-512-256'}, # pick the one that seemed better initially
+    'p_augment_data': {'value': [0, 0.4, 0.6]},
+    'noise_std': {'value': 0.02}
+  }
+},
     'rotate_only': {
         'method': 'grid',
         'metric': {
