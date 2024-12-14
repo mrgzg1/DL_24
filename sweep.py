@@ -196,7 +196,7 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_id', type=str, help='Optional: ID of existing sweep to run')
     parser.add_argument('--project_name', type=str, default='wall_jepa_sweep', help='W&B project name')
     parser.add_argument('--experiment_type', type=str, default="default",
-                      choices=['flip_only', 'rotate_only', 'noise_only', 'all_augs', 'default'],
+                      choices=['flip_only', 'rotate_only', 'noise_only', 'baseline'],
                       help='Type of experiment to run')
     args = parser.parse_args()
     
