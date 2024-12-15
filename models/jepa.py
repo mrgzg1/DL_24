@@ -98,7 +98,8 @@ class JEPA(nn.Module):
             tgt_enc: [B, T, D]
 
         """
-        _, T, _, _, _ = obs.size()
+        _, T, _, _, _ = action.size()
+        T += 1
         predicted_encodings = []
         target_encodings = []
 
