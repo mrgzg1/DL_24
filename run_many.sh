@@ -1,17 +1,25 @@
-# example base we run with:
-# python main.py --experiment_name text_exp --data_path /data/DL_24/data --gpu_id 0 -b 512
+#!/bin/bash
 
+# Check if sweep_id is provided
+if [ $# -eq 0 ]; then
+	    echo "Please provide a sweep_id as an argument."
+	        echo "Usage: $0 <sweep_id>"
+		    exit 1
+fi
 
-EXP_NAME=b64_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 6 -b 64  >> resources/$EXP_NAME.log 2>&1 &
+# Get the sweep_id from the first argument
+sweep_id=$1
 
-EXP_NAME=b128_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 5 -b 128 >> resources/$EXP_NAME.log 2>&1 &
+# Run sweep.py on GPUs 1-7
+for gpu_id in {1..7}
+do
+	    export CUDA_VISIBLE_DEVICES=$gpu_id
+	        python sweep.py --sweep_id $sweep_id >> resources/gpu${gpu_id}.log 2>&1 &
+		echo "Started sweep on GPU $gpu_id" 
+		sleep 10
+	    done
 
-EXP_NAME=b256_cnn_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 4 -b 256 >> resources/$EXP_NAME.log 2>&1 &
+	    # Wait for all background processes to finish
+	    wait
 
-EXP_NAME=b256_vit_vr_l
-python main.py --experiment_name $EXP_NAME --data_path /data/DL_24/data --gpu_id 3 -b 1024 --encoder_type vit --loss_type vicreg >> resources/$EXP_NAME.log 2>&1 &
-
-
+	    echo "All sweep processes have completed."
