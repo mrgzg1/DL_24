@@ -90,8 +90,8 @@ def parse_args():
 
 
     # Experiments
-    parser.add_argument('--data_path',             type=str,      default='/scratch/DL24FA', required=True)
-    parser.add_argument('--experiment_name',        type=str,      default=None, required=True)
+    parser.add_argument('--data_path',             type=str,      default='/scratch/DL24FA')
+    parser.add_argument('--experiment_name',        type=str,      default=None)
     parser.add_argument('--eval',                  action='store_true')
 
 

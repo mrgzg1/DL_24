@@ -100,6 +100,9 @@ class JEPA(nn.Module):
         """
         _, T, _ = actions.size()
         T += 1
+        print("~~~~~><><><><><><")
+        print(T)
+        exit(128)
         predicted_encodings = []
         target_encodings = []
 
