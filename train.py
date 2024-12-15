@@ -12,16 +12,35 @@ import wandb
 
 from schedulers import Scheduler, LRSchedule
 from configs import ConfigBase
+from evaluator import ProbingEvaluator
 
 
 class TrainJEPA():
-    def __init__(self, device, model, train_ds, config, save_path):
+    def __init__(self, device, model, train_ds, config, save_path, probe_train_ds=None, probe_val_ds=None, probe_train_expert_ds=None, probe_val_expert_ds=None):
         self.device = device
         self.model = model
         self.train_ds = train_ds
         self.config = config
         self.save_path = save_path
-
+        
+        # Initialize evaluator if probe datasets are provided
+        if probe_train_ds is not None and probe_val_ds is not None:
+            self.evaluator = ProbingEvaluator(
+                device=device,
+                model=model,
+                probe_train_ds=probe_train_ds,
+                probe_val_ds=probe_val_ds,
+                quick_debug=False
+            )
+            
+        if probe_train_expert_ds is not None and probe_val_expert_ds is not None:
+            self.expert_evaluator = ProbingEvaluator(
+                device=device,
+                model=model,
+                probe_train_ds=probe_train_expert_ds,
+                probe_val_ds=probe_val_expert_ds,
+                quick_debug=False
+            )
 
     def train(self):
         self.model.to(self.device)
@@ -53,10 +72,6 @@ class TrainJEPA():
                     optimizer.zero_grad()
 
                     pred_enc, tgt_enc = self.model(obs, actions, get_tgt_enc=True)
-
-                    # pred_var = pred_enc.var(dim=0).mean().item()
-                    # tgt_var = tgt_enc.var(dim=0).mean().item()
-                    # print(f"Pred Variance: {pred_var}, Target Variance: {tgt_var}")
 
                     # Compute the loss using the energy distance
                     if self.config.loss_type == 'vicreg':
@@ -92,12 +107,32 @@ class TrainJEPA():
             avg_energy = total_energy / len(self.train_ds)
             print(f"Epoch [{epoch+1}/{self.config.epochs}] Average Energy Distance: {avg_energy}")
 
-            # Log epoch metrics
-            wandb.log({
-                'epoch': epoch,
-                'avg_energy': avg_energy,
-                'best_train_loss': best_train_loss
-            }, step=step)
+            # Evaluate model after each epoch if evaluator exists
+            if hasattr(self, 'evaluator'):
+                print("Evaluating model on normal data...")
+                prober = self.evaluator.train_pred_prober()
+                avg_losses = self.evaluator.evaluate_all(prober=prober)
+                print(f"wall: {avg_losses['wall']} | normal: {avg_losses['normal']}")
+                
+                # Log evaluation metrics
+                wandb.log({
+                    'epoch': epoch,
+                    'avg_energy': avg_energy,
+                    'eval/normal_loss': avg_losses['normal'],
+                    'eval/wall_loss': avg_losses['wall'],
+                    'eval/combined_loss': (avg_losses['normal'] + avg_losses['wall'])/2
+                }, step=step)
+
+            if hasattr(self, 'expert_evaluator'):
+                print("Evaluating model on expert data...")
+                expert_prober = self.expert_evaluator.train_pred_prober()
+                expert_losses = self.expert_evaluator.evaluate_all(prober=expert_prober)
+                print(f"expert loss: {expert_losses['expert']}")
+                
+                # Log expert evaluation metrics
+                wandb.log({
+                    'eval/expert_loss': expert_losses['expert']
+                }, step=step)
 
             if avg_energy < best_train_loss:
                 best_train_loss = avg_energy
@@ -107,8 +142,6 @@ class TrainJEPA():
             if epoch % 5 == 0:
                 self.save_model(self.save_path, int(epoch/5))
 
-
-
         return self.model   
 
     def _off_diagonal(self, matrix):
@@ -117,50 +150,6 @@ class TrainJEPA():
         """
         n, _ = matrix.shape
         return matrix.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
-
-    # def vicreg_loss(self, pred_enc, tgt_enc):
-    #     """
-    #     Compute the VicReg loss between the predicted and target encodings
-        
-    #     Args:
-    #         pred_enc: [B, T, D]
-    #         tgt_enc: [B, T, D]
-
-    #     Output:
-    #         loss: float
-    #     """
-
-    #     # Reshape the predicted and target encodings
-    #     B, T, D = pred_enc.size()
-    #     pred_enc = pred_enc.view(B*T, D)
-    #     tgt_enc = tgt_enc.view(B*T, D).detach()
-
-    #     # Normalize the representations
-    #     pred_enc = F.normalize(pred_enc, dim=-1, p=2)
-    #     tgt_enc = F.normalize(tgt_enc, dim=-1,   p=2)
-
-    #     # Compute invarience loss
-    #     repr_loss = F.mse_loss(pred_enc, tgt_enc)
-
-    #     # Normalize by centering 
-    #     pred_enc = pred_enc - pred_enc.mean(dim=0)
-    #     tgt_enc = tgt_enc - tgt_enc.mean(dim=0)
-
-    #     # Varience Regularization 
-    #     std_pred = torch.sqrt(pred_enc.var(dim=0) + 1e-4)
-    #     std_tgt =  torch.sqrt(tgt_enc.var(dim=0) + 1e-4) 
-    #     std_loss = torch.mean(F.relu(1 - std_pred)) / 2 + torch.mean(F.relu(1 - std_tgt)) / 2
-
-    #     # Covariance Regularization
-    #     cov_pred = (pred_enc.t() @ pred_enc) / (B*T - 1) # D x D
-    #     cov_tgt  = (tgt_enc.t() @ tgt_enc)  / (B*T - 1)  # D x D
-
-    #     cov_loss = self._off_diagonal(cov_pred).pow(2).sum().div(D) + \
-    #                self._off_diagonal(cov_tgt).pow(2).sum().div(D)
-
-    #     loss = self.config.sim_coeff * repr_loss + self.config.std_coeff * std_loss + self.config.cov_coeff * cov_loss
-
-    #     return loss
 
     def vicreg_loss(self, pred_enc, tgt_enc, step):
         """
