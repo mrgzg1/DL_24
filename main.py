@@ -2,6 +2,8 @@ from dataset import create_wall_dataloader
 from evaluator import ProbingEvaluator
 from train import TrainJEPA
 import torch
+import numpy as np
+import random
 # from models.prober import MockModel
 from models.jepa import JEPA
 import glob
@@ -58,10 +60,11 @@ def load_data_probe(device, batch_size):
     probe_val_ds = {
         "normal": probe_val_normal_ds,
         "wall": probe_val_wall_ds,
-        "wall_other": probe_val_wall_other_ds
+        "wall_other": probe_val_wall_other_ds,
     }
 
     return probe_train_ds, probe_val_ds
+
 
 def load_expert_data(device, batch_size):
     data_path = CONFIG.data_path
@@ -85,6 +88,7 @@ def load_expert_data(device, batch_size):
     }
 
     return probe_train_expert_ds, probe_val_expert_ds
+
 
 def load_data_jepa(device, batch_size):
     data_path = CONFIG.data_path
@@ -123,8 +127,18 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
         print(f"{probe_attr} loss: {loss}")
         wandb.log({f"eval_{probe_attr}_loss": loss})
 
-def train_jepa(device, model, train_ds, config, save_path):
-    trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, config=config, save_path=save_path)
+def train_jepa(device, model, train_ds, probe_train_ds, probe_val_ds, probe_train_expert_ds, probe_val_expert_ds, config, save_path):
+    trainer = TrainJEPA(
+        device=device, 
+        model=model, 
+        train_ds=train_ds, 
+        config=config, 
+        save_path=save_path,
+        probe_train_ds=probe_train_ds,
+        probe_val_ds=probe_val_ds,
+        probe_train_expert_ds=probe_train_expert_ds,
+        probe_val_expert_ds=probe_val_expert_ds
+    )
     model = trainer.train()
 
 def load_model_weights(model, path, device):
@@ -137,6 +151,15 @@ def load_model_weights(model, path, device):
 if __name__ == "__main__":
     args = parse_args()
     CONFIG = args
+
+    # Set random seeds for reproducibility
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     # Initialize wandb
     wandb.init(
@@ -165,45 +188,54 @@ if __name__ == "__main__":
 
         model_path = os.path.join(experiment_path, "checkpoints")
         train_ds = load_data_jepa(device, args.batch_size)
+        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+        probe_train_expert_ds, probe_val_expert_ds = load_expert_data(device, args.batch_size)
         model = load_model(device, args)
-        train_jepa(device, model, train_ds, config=args, save_path=model_path)
-    # evaluate the model at the end of every run anyways
-    if not os.path.exists(experiment_path):
-        print(f"Error: Experiment directory {experiment_path} does not exist")
-        sys.exit(1)
-        
-    # Fix path construction to ensure proper joining
-    checkpoints_dir = os.path.join(experiment_path, "checkpoints")
-    checkpoint_files = ['best_model.pth']
-    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
-
-    if not checkpoint_files:
-        print(f"Error: No checkpoint files found in {checkpoints_dir}")
-        sys.exit(1)
-        
-    print(f"Experiment path: {experiment_path}")
-    print("Found checkpoints:", checkpoint_files)
-
-    # Use the same device as specified in args
-    device = get_device(args)
+        train_jepa(
+            device, 
+            model, 
+            train_ds, 
+            probe_train_ds, 
+            probe_val_ds,
+            probe_train_expert_ds,
+            probe_val_expert_ds,
+            config=args, 
+            save_path=model_path
+        )
+    else:
+        # evaluate the model at the end of every run anyways
+        if not os.path.exists(experiment_path):
+            print(f"Error: Experiment directory {experiment_path} does not exist")
+            sys.exit(1)
+            
+        # Fix path construction to ensure proper joining
+        checkpoints_dir = os.path.join(experiment_path, "checkpoints")
+        # checkpoint_files = ['best_model.pth'] # uncomment me to load best_mode.pth
+        checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
     
-    # Load both normal and expert probe datasets
-    probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
-    probe_train_expert_ds, probe_val_expert_ds = load_expert_data(device, args.batch_size)
-    
-    model = load_model(device, args)
+        
+        if not checkpoint_files:
+            print(f"Error: No checkpoint files found in {checkpoints_dir}")
+            sys.exit(1)
+            
+        print(f"Experiment path: {experiment_path}")
+        print("Found checkpoints:", checkpoint_files)
 
-    # Evaluate each checkpoint
-    for checkpoint_path in checkpoint_files:
-        print("\nTesting JEPA model:", checkpoint_path)
-        try:
-            model = load_model_weights(model, checkpoint_path, device)
-            print("\nEvaluating on normal probe datasets:")
-            evaluate_model(device, model, probe_train_ds, probe_val_ds)
-            print("\nEvaluating on expert probe datasets:")
-            evaluate_model(device, model, probe_train_expert_ds, probe_val_expert_ds)
-        except Exception as e:
-            print(e)
-            print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
-            raise(e)
-            continue
+        # Use the same device as specified in args
+        device = get_device(args)
+        probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+        probe_train_expert_ds, probe_val_expert_ds = load_expert_data(device, args.batch_size)
+        model = load_model(device, args)
+
+        # Evaluate each checkpoint
+        for checkpoint_path in checkpoint_files:
+            print("\nTesting JEPA model:", checkpoint_path)
+            try:
+                model = load_model_weights(model, checkpoint_path, device)
+                evaluate_model(device, model, probe_train_ds, probe_val_ds)
+                evaluate_model(device, model, probe_train_expert_ds, probe_val_expert_ds)
+            except Exception as e:
+                print(e)
+                print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
+                raise(e)
+                continue
