@@ -113,7 +113,7 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
 if __name__ == "__main__":
     # Load config
     args = parse_args()
-    device = get_device(args)
+    device = get_device()
     
     # Load model weights from current directory
     model_path = "best_model.pth"
