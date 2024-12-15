@@ -41,9 +41,6 @@ def train_jepa(config=None):
             "--epochs", str(config.epochs),
             "--experiment_name", experiment_name,
             "--batch_size", str(config.batch_size),
-            "--seed", str(config.seed),
-            "--num_kernels", str(config.num_kernels),
-            "--repr_dim", str(config.repr_dim),
             "--std_coeff", str(config.std_coeff),
             "--cov_coeff", str(config.cov_coeff),
             # "--learning_rate", str(config.learning_rate),
@@ -68,11 +65,11 @@ sweep_config = {
     'metric': {'name': 'eval_normal_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256]},
-        'epochs': {'values': [20]},
+        'epochs': {'values': [16]},
         'num_kernels': {'values': [8]},
         'repr_dim': {'values': [512]},
         'std_coeff': {'values': [1, 0.5, 5, 10, 20]},
-        'cov_coeff': {'values': [1, 0.5, 5, 10, 20]}
+        'cov_coeff': {'values': [1]}
         # 'learning_rate': {'values': [1e-3, 1e-4]},
         # 'weight_decay': {'values': [1e-4]},
         # 'encoder_type': {'values': ['cnn']},
