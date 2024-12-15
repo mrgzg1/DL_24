@@ -68,7 +68,7 @@ sweep_config = {
         'epochs': {'values': [16]},
         'num_kernels': {'values': [8]},
         'repr_dim': {'values': [512]},
-        'coeff': {'values': [1, 0.5, 5, 10, 20]},
+        'coeff': {'values': [0.5, 0.4, 0.2, 0.3]},
         # 'learning_rate': {'values': [1e-3, 1e-4]},
         # 'weight_decay': {'values': [1e-4]},
         # 'encoder_type': {'values': ['cnn']},

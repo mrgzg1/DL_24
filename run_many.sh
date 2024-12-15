@@ -15,7 +15,8 @@ for gpu_id in {1..7}
 do
 	    export CUDA_VISIBLE_DEVICES=$gpu_id
 	        python sweep.py --sweep_id $sweep_id >> resources/gpu${gpu_id}.log 2>&1 &
-		    echo "Started sweep on GPU $gpu_id" sleep 10
+		echo "Started sweep on GPU $gpu_id" 
+		sleep 10
 	    done
 
 	    # Wait for all background processes to finish
