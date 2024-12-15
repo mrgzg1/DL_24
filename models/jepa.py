@@ -96,9 +96,10 @@ class JEPA(nn.Module):
         Output:
             pred_enc: [B, T, D]
             tgt_enc: [B, T, D]
-
         """
-
+        # Get actual sequence length from input
+        seq_length = obs.shape[1]
+        
         predicted_encodings = []
         target_encodings = []
 
@@ -108,27 +109,20 @@ class JEPA(nn.Module):
         predicted_encodings.append(state_t.unsqueeze(1))
 
         if get_tgt_enc:
-
             with torch.no_grad():
                 target_encoding = self.target_encoder(first_frame)
             target_encodings.append(target_encoding.unsqueeze(1))
 
         # Predicting the future feature representation at each timestep
-        for t in range(1, self.n_steps):
-            action = actions[:, t-1, :] # Get the action at timestep t-1
-
-            state_t = self.predictor(state_t, action) # Predict the future feature representation at timestep t
-
-            # Print varience across embeddings for debugging
-            # print(state_t.var(dim=1).mean())
-
+        # Use actual sequence length instead of self.n_steps
+        for t in range(1, seq_length):
+            action = actions[:, t-1, :]
+            state_t = self.predictor(state_t, action)
             predicted_encodings.append(state_t.unsqueeze(1))
 
             if get_tgt_enc:
                 with torch.no_grad():
                     target_encoding = self.target_encoder(obs[:, t, :, :, :])
-
-                    # Print max and min values of  obs 
                 target_encodings.append(target_encoding.unsqueeze(1))
 
         # Stack the predicted feature representations for each timestep
