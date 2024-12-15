@@ -56,9 +56,9 @@ def parse_args():
     # architecture
     parser.add_argument('--predictor_type',        type=str,       default='mlp')               # mlp, gru, lstm, tcn
     parser.add_argument('--encoder_type',          type=str,       default='cnn')               # cnn, vit
-    parser.add_argument('--sim_coeff',             type=float,     default=1.0)
-    parser.add_argument('--std_coeff',             type=float,     default=1.0)
-    parser.add_argument('--cov_coeff',             type=float,     default=1.0)
+    parser.add_argument('--sim_coeff',             type=float,     default=1.0) # keep the same
+    parser.add_argument('--std_coeff',             type=float,     default=1.0) # [1, 0.5, 5, 10, 20]
+    parser.add_argument('--cov_coeff',             type=float,     default=1.0) # [1. 0.5, 5, 10, 20]
     parser.add_argument('--momentum',              type=float,     default=0.99)
     parser.add_argument('--loss_type',             type=str,       default='vicreg')            # vicreg, byol
     parser.add_argument('--norm_features',         type=bool,      default=False)
