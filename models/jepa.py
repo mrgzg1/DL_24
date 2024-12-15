@@ -98,7 +98,7 @@ class JEPA(nn.Module):
             tgt_enc: [B, T, D]
 
         """
-        _, T, _, _, _ = action.size()
+        _, T, _ = actions.size()
         T += 1
         predicted_encodings = []
         target_encodings = []
