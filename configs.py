@@ -93,6 +93,9 @@ def parse_args():
     parser.add_argument('--data_path',             type=str,      default='/scratch/DL24FA')
     parser.add_argument('--experiment_name',        type=str,      default=None)
     parser.add_argument('--eval',                  action='store_true')
+    parser.add_argument('--repr_dim', type=int,      default=512)
+    parser.add_argument('--num_kernels', type=int,      default=8)
+
 
 
     args = parser.parse_args()
