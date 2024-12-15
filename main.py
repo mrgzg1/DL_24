@@ -163,4 +163,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
             print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
+            raise(e)
             continue
