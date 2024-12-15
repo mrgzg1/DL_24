@@ -4,6 +4,7 @@ import torch
 from models.jepa import JEPA
 import glob
 import os
+from configs import parse_args
 
 
 def get_device():
@@ -78,15 +79,17 @@ def load_expert_data(device):
     return probe_train_expert_ds, probe_val_expert_ds
 
 
-def load_model(device, model_path):
-    """Load trained model."""
-    # Create model instance
-    model = JEPA(device=device)
-    
-    # Load weights
-    model.load_state_dict(torch.load(model_path, map_location=device))
+def load_model(device, config):
+    """Load or initialize the model."""
+    model = JEPA(device=device, config=config)
+    return model
+
+
+def load_model_weights(model, path, device):
+    """Load model weights and move to device."""
+    model.load_state_dict(torch.load(path, map_location=device))
     model = model.to(device)
-    model.eval()
+    model.device = device
     return model
 
 
@@ -108,14 +111,17 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
 
 
 if __name__ == "__main__":
-    device = get_device()
+    # Load config
+    args = parse_args()
+    device = get_device(args)
     
     # Load model weights from current directory
     model_path = "best_model.pth"
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model weights not found at {model_path}")
         
-    model = load_model(device, model_path)
+    model = load_model(device, args)
+    model = load_model_weights(model, model_path, device)
     
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Total Trainable Parameters: {total_params:,}")

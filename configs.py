@@ -75,7 +75,7 @@ def parse_args():
     parser.add_argument('-d', '--gpu_id',          type=int,      default=0)
     parser.add_argument('--num_devices',           type=int,      default=1)
     parser.add_argument('-e', '--epochs',          type=int,      default=20)
-    parser.add_argument('-b', '--batch_size',      type=int,      default=128)
+    parser.add_argument('-b', '--batch_size',      type=int,      default=256)
     parser.add_argument('-s', '--shuffle',         type=bool,     default=False)
     parser.add_argument('-n', '--num_workers',     type=int,      default=4)
     parser.add_argument('--seed',                  type=int,      default=10)
