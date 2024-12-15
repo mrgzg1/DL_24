@@ -47,10 +47,44 @@ def load_data_probe(device, batch_size):
         batch_size=batch_size,
     )
 
-    probe_val_ds = {"normal": probe_val_normal_ds, "wall": probe_val_wall_ds}
+    probe_val_wall_other_ds = create_wall_dataloader(
+        data_path=f"{data_path}/probe_wall_other/val",
+        probing=True,
+        device=device,
+        train=False,
+        batch_size=batch_size,
+    )
+
+    probe_val_ds = {
+        "normal": probe_val_normal_ds,
+        "wall": probe_val_wall_ds,
+        "wall_other": probe_val_wall_other_ds
+    }
 
     return probe_train_ds, probe_val_ds
 
+def load_expert_data(device, batch_size):
+    data_path = CONFIG.data_path
+
+    probe_train_expert_ds = create_wall_dataloader(
+        data_path=f"{data_path}/probe_expert/train",
+        probing=True,
+        device=device,
+        train=True,
+        batch_size=batch_size,
+    )
+
+    probe_val_expert_ds = {
+        "expert": create_wall_dataloader(
+            data_path=f"{data_path}/probe_expert/val",
+            probing=True,
+            device=device,
+            train=False,
+            batch_size=batch_size,
+        )
+    }
+
+    return probe_train_expert_ds, probe_val_expert_ds
 
 def load_data_jepa(device, batch_size):
     data_path = CONFIG.data_path
@@ -141,7 +175,8 @@ if __name__ == "__main__":
     # Fix path construction to ensure proper joining
     checkpoints_dir = os.path.join(experiment_path, "checkpoints")
     checkpoint_files = ['best_model.pth']
-    
+    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
+
     if not checkpoint_files:
         print(f"Error: No checkpoint files found in {checkpoints_dir}")
         sys.exit(1)
@@ -151,7 +186,11 @@ if __name__ == "__main__":
 
     # Use the same device as specified in args
     device = get_device(args)
+    
+    # Load both normal and expert probe datasets
     probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+    probe_train_expert_ds, probe_val_expert_ds = load_expert_data(device, args.batch_size)
+    
     model = load_model(device, args)
 
     # Evaluate each checkpoint
@@ -159,7 +198,10 @@ if __name__ == "__main__":
         print("\nTesting JEPA model:", checkpoint_path)
         try:
             model = load_model_weights(model, checkpoint_path, device)
+            print("\nEvaluating on normal probe datasets:")
             evaluate_model(device, model, probe_train_ds, probe_val_ds)
+            print("\nEvaluating on expert probe datasets:")
+            evaluate_model(device, model, probe_train_expert_ds, probe_val_expert_ds)
         except Exception as e:
             print(e)
             print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
