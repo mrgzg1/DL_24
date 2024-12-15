@@ -2,6 +2,8 @@ from dataset import create_wall_dataloader
 from evaluator import ProbingEvaluator
 from train import TrainJEPA
 import torch
+import numpy as np
+import random
 # from models.prober import MockModel
 from models.jepa import JEPA
 import glob
@@ -13,6 +15,15 @@ from configs import parse_args, save_args, check_folder_paths, load_args
 
 TRAIN_JEPA = True
 CONFIG = None # used as global to save args
+
+def set_seed(seed):
+    """Set seeds for reproducibility"""
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def get_device(args):
     device = torch.device(f"cuda")
@@ -109,6 +120,9 @@ if __name__ == "__main__":
     CONFIG = args
     if not args.experiment_name or args.experiment_name == "":
         raise Exception("WEF")
+
+    # Set random seeds for reproducibility
+    set_seed(args.seed)
 
     # Initialize wandb
     if args.wandb_id is None:
