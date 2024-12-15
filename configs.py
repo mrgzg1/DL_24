@@ -79,7 +79,7 @@ def parse_args():
     # training
     parser.add_argument('-r', '--run_id',          type=int,      default=1)
     parser.add_argument('--num_devices',           type=int,      default=1)
-    parser.add_argument('-e', '--epochs',          type=int,      default=20)
+    parser.add_argument('-e', '--epochs',          type=int,      default=50)
     parser.add_argument('-b', '--batch_size',      type=int,      default=128)
     parser.add_argument('-s', '--shuffle',         type=bool,     default=False)
     parser.add_argument('-n', '--num_workers',     type=int,      default=4)
