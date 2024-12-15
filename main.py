@@ -140,7 +140,7 @@ if __name__ == "__main__":
         
     # Fix path construction to ensure proper joining
     checkpoints_dir = os.path.join(experiment_path, "checkpoints")
-    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "*.pth"))
+    checkpoint_files = ['best_model.pth']
     
     if not checkpoint_files:
         print(f"Error: No checkpoint files found in {checkpoints_dir}")
