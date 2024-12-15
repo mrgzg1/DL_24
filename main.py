@@ -161,5 +161,6 @@ if __name__ == "__main__":
             model = load_model_weights(model, checkpoint_path, device)
             evaluate_model(device, model, probe_train_ds, probe_val_ds)
         except Exception as e:
+            print(e)
             print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
             continue
