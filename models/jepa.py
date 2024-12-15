@@ -98,7 +98,7 @@ class JEPA(nn.Module):
             tgt_enc: [B, T, D]
 
         """
-
+        _, T, _, _, _ = obs.size()
         predicted_encodings = []
         target_encodings = []
 
@@ -114,7 +114,7 @@ class JEPA(nn.Module):
             target_encodings.append(target_encoding.unsqueeze(1))
 
         # Predicting the future feature representation at each timestep
-        for t in range(1, self.n_steps):
+        for t in range(1, T):
             action = actions[:, t-1, :] # Get the action at timestep t-1
 
             state_t = self.predictor(state_t, action) # Predict the future feature representation at timestep t
