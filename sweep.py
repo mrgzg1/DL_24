@@ -43,7 +43,11 @@ def train_jepa(config=None):
             "--batch_size", str(config.batch_size),
             "--seed", str(config.seed),
             "--num_kernels", str(config.num_kernels),
-            "--repr_dim", str(config.repr_dim)
+            "--repr_dim", str(config.repr_dim),
+            # "--learning_rate", str(config.learning_rate),
+            # "--weight_decay", str(config.weight_decay),
+            # "--encoder_type", str(config.encoder_type),
+            # "--loss_type", str(config.loss_type)
         ]
 
         print(f"Running command: {' '.join(cmd)}")
@@ -62,9 +66,14 @@ sweep_config = {
     'metric': {'name': 'eval_normal_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256, 128, 64, 512]},
+        'epochs': {'values': [20]},
         'seed': {'values': [531]}, # Multiple seeds for reproducibility
         'num_kernels': {'values': [8, 4, 16]},
-        'repr_dim': {'values': [512, 256, 128, 1024]}
+        'repr_dim': {'values': [512, 256, 128, 1024]},
+        # 'learning_rate': {'values': [1e-3, 1e-4]},
+        # 'weight_decay': {'values': [1e-4]},
+        # 'encoder_type': {'values': ['cnn']},
+        # 'loss_type': {'values': ['vicreg']}
     }
 }
 
