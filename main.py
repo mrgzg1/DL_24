@@ -2,6 +2,8 @@ from dataset import create_wall_dataloader
 from evaluator import ProbingEvaluator
 from train import TrainJEPA
 import torch
+import numpy as np
+import random
 # from models.prober import MockModel
 from models.jepa import JEPA
 import glob
@@ -47,7 +49,19 @@ def load_data_probe(device, batch_size):
         batch_size=batch_size,
     )
 
-    probe_val_ds = {"normal": probe_val_normal_ds, "wall": probe_val_wall_ds}
+    probe_val_wall_other_ds = create_wall_dataloader(
+        data_path=f"{data_path}/probe_wall_other/val",
+        probing=True,
+        device=device,
+        train=False,
+        batch_size=batch_size,
+    )
+
+    probe_val_ds = {
+        "normal": probe_val_normal_ds,
+        "wall": probe_val_wall_ds,
+        "wall_other": probe_val_wall_other_ds,
+    }
 
     return probe_train_ds, probe_val_ds
 
@@ -138,6 +152,15 @@ if __name__ == "__main__":
     args = parse_args()
     CONFIG = args
 
+    # Set random seeds for reproducibility
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     # Initialize wandb
     wandb.init(
         project="wall_jepa", 
@@ -201,6 +224,7 @@ if __name__ == "__main__":
         # Use the same device as specified in args
         device = get_device(args)
         probe_train_ds, probe_val_ds = load_data_probe(device, args.batch_size)
+        probe_train_expert_ds, probe_val_expert_ds = load_expert_data(device, args.batch_size)
         model = load_model(device, args)
 
         # Evaluate each checkpoint
@@ -209,6 +233,7 @@ if __name__ == "__main__":
             try:
                 model = load_model_weights(model, checkpoint_path, device)
                 evaluate_model(device, model, probe_train_ds, probe_val_ds)
+                evaluate_model(device, model, probe_train_expert_ds, probe_val_expert_ds)
             except Exception as e:
                 print(e)
                 print(f"Error loading/evaluating checkpoint {checkpoint_path}: {str(e)}")
