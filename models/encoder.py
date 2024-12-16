@@ -80,25 +80,57 @@ class PositionalEncoding2D(nn.Module):
 
         return x + pos_embed
 
+#################### Cross-Attention Fusion Module ####################
+class CrossAttentionFusion(nn.Module):
+    """
+    Use a MultiheadAttention module to fuse agent representation (query) with wall representation (key/value).
+    Both agent_repr and wall_repr are [B, D].
+    We'll reshape them to [1, B, D] to fit into nn.MultiheadAttention input.
+    """
+    def __init__(self, dim, num_heads=4, dropout=0.1):
+        super(CrossAttentionFusion, self).__init__()
+        # Ensure dim is divisible by num_heads
+        assert dim % num_heads == 0, f"dim ({dim}) must be divisible by num_heads ({num_heads})"
+        self.attn = nn.MultiheadAttention(dim, num_heads, dropout=dropout)
+        self.norm = nn.LayerNorm(dim)
+
+    def forward(self, agent_repr, wall_repr):
+        # agent_repr, wall_repr: [B, D]
+        # Verify input dimensions match expected dim
+        assert agent_repr.size(-1) == wall_repr.size(-1), "Agent and wall representations must have same dimension"
+        # Reshape to [1, B, D] for MHA
+        agent_seq = agent_repr.unsqueeze(0)  # Q
+        wall_seq = wall_repr.unsqueeze(0)    # K,V
+        # MultiheadAttention expects (L, N, E): L=sequence length, N=batch size, E=embed dim
+        # Here L=1 for both
+        fused, _ = self.attn(agent_seq, wall_seq, wall_seq)
+        # fused: [1, B, D]
+        fused = fused.squeeze(0)  # [B, D]
+        fused = self.norm(fused)
+        return fused
+
+
 ################ ENCODER #####################
-
-# Encoder model that uses a CNNBackbone to encode the input image. Define two heads for the encoder:
-# - Gets a representation of the wall channel of the input image
-# - Gets a representation of the agent channel of the input image
-# - Fuse the two representations using a linear layer to get the final representation
-
 class Encoder(nn.Module):
     def __init__(self, repr_dim, config, dropout=0.1):
         super().__init__()
         self.repr_dim = repr_dim
         self.dropout = dropout
         self.config = config
-        self.wall_encoder = self._get_backbone(config, "wall",)
+
+        # Create positional encoding for wall
+        # Assuming the input image is 64x64 (as in your original code)
+        self.wall_pos_encoding = PositionalEncoding2D(
+            height=64,
+            width=64,
+            channel_dim=32  # an arbitrary dimension for PE; must be divisible by 4
+        )
+
+        self.wall_encoder = self._get_backbone(config, "wall")
         self.agent_encoder = self._get_backbone(config, "agent")
-        self.fusion = nn.Linear(repr_dim*2, repr_dim)
-        
-        # Add positional encoding for wall channel
-        self.wall_pos_enc = PositionalEncoding2D(height=65, width=65, channel_dim=4)
+
+        # Replace simple linear fusion with cross-attention
+        self.fusion = CrossAttentionFusion(dim=repr_dim, num_heads=4, dropout=dropout)
 
     def _get_backbone(self, config, for_who):
         backbone = config.encoder_type
@@ -110,15 +142,22 @@ class Encoder(nn.Module):
             raise NotImplementedError
     
     def forward(self, x):
-        # Add positional encoding to wall channel
-        wall_x = x[:, 0].unsqueeze(1)
-        wall_x = self.wall_pos_enc(wall_x)
-        wall_repr = self.wall_encoder(wall_x)
-        
-        agent_repr = self.agent_encoder(x[:, 1].unsqueeze(1))
-        x = torch.cat((wall_repr, agent_repr), dim=-1)
-        x = self.fusion(x)
-        return x
+        # x: [B, Ch=2, H, W]
+        # Apply positional encoding to wall channel
+        wall_input = x[:, 0].unsqueeze(1)  # [B,1,H,W]
+        wall_input = self.wall_pos_encoding(wall_input)
+
+        # Encode wall and agent
+        wall_repr = self.wall_encoder(wall_input)  # [B, repr_dim]
+        agent_repr = self.agent_encoder(x[:, 1].unsqueeze(1))  # [B, repr_dim]
+
+        # Verify representations have correct dimensions before fusion
+        assert wall_repr.size(-1) == self.repr_dim and agent_repr.size(-1) == self.repr_dim, \
+            f"Encoder outputs must match repr_dim ({self.repr_dim})"
+
+        # Fuse representations with cross attention
+        fused_repr = self.fusion(agent_repr, wall_repr)  # [B, repr_dim]
+        return fused_repr
 
 
 ################# ResNet Encoder ####################
