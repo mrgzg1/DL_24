@@ -69,11 +69,11 @@ sweep_config = {
         'batch_size': {'values': [256]},
         'epochs': {'values': [50]},
         # best perf, both were 2
-        'wall_n_layers': {'values': [4,8,16]},
-        'agent_n_layers': {'values': [2,4,6]},
+        'wall_n_layers': {'values': [8,16,32]},
+        'agent_n_layers': {'values': [2]},
         # best perf, both were 8
         'wall_n_kernels': {'values': [8, 16]},
-        'agent_n_kernels': {'values': [8, 2, 4]},
+        'agent_n_kernels': {'values': [2]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
         'seed': {'values': [53]},
