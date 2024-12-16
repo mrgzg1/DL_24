@@ -75,7 +75,7 @@ sweep_config = {
         'agent_n_layers': {'values': [2,4,6]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
-        'seed': {'values': [53, 230, 403, 302, 53, 392, 53]},
+        'seed': {'values': [53]},
     }
 }
 

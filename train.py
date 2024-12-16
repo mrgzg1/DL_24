@@ -112,7 +112,7 @@ class TrainJEPA():
                 print("Evaluating model on normal data...")
                 prober = self.evaluator.train_pred_prober()
                 avg_losses = self.evaluator.evaluate_all(prober=prober)
-                print(f"wall: {avg_losses['wall']} | normal: {avg_losses['normal']}")
+                print(f"wall: {avg_losses['wall']} | wall_other: {avg_losses['wall_other']} | normal: {avg_losses['normal']}")
                 
                 # Log evaluation metrics
                 wandb.log({
@@ -120,7 +120,8 @@ class TrainJEPA():
                     'avg_energy': avg_energy,
                     'eval/normal_loss': avg_losses['normal'],
                     'eval/wall_loss': avg_losses['wall'],
-                    'eval/combined_loss': (avg_losses['normal'] + avg_losses['wall'])/2
+                    'eval/wall_other_loss': avg_losses['wall_other'],
+                    'eval/combined_loss': avg_losses['normal'] + avg_losses['wall'] + avg_losses['wall_other']
                 }, step=step)
 
             if hasattr(self, 'expert_evaluator'):
@@ -131,7 +132,8 @@ class TrainJEPA():
                 
                 # Log expert evaluation metrics
                 wandb.log({
-                    'eval/expert_loss': expert_losses['expert']
+                    'eval/expert_loss': expert_losses['expert'],
+                    'eval/combined_loss': avg_losses['normal'] + avg_losses['wall'] + avg_losses['wall_other'] + expert_losses['expert']
                 }, step=step)
 
             if avg_energy < best_train_loss:
