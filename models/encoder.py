@@ -24,8 +24,9 @@ class PositionalEncoding2D(nn.Module):
         self.height = height
         self.width = width
         self.channel_dim = channel_dim
-        self.div_term = torch.exp(torch.arange(0, channel_dim//2, 2).float() * 
-                                  -(torch.log(torch.tensor(10000.0)) / (channel_dim//2)))
+        # Register div_term as a buffer so it moves to GPU with the model
+        self.register_buffer('div_term', torch.exp(torch.arange(0, channel_dim//2, 2).float() * 
+                                  -(torch.log(torch.tensor(10000.0)) / (channel_dim//2))))
         
     def forward(self, x):
         """
