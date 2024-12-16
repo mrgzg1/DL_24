@@ -63,18 +63,19 @@ def train_jepa(config=None):
 # Define sweep configuration 
 sweep_config = {
     'method': 'grid',
-    'metric': {'name': 'eval_normal_loss', 'goal': 'minimize'},
+    'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256]},
         'epochs': {'values': [16]},
-        'num_kernels': {'values': [8]},
+        # best perf, both were 8
+        'wall_n_kernels': {'values': [4,8,16]},
+        'agent_n_kernels': {'values': [2,4,8]},
+        # best perf, both were 2
+        'wall_n_layers': {'values': [4,8,10]},
+        'agent_n_layers': {'values': [2,4,6]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
         'seed': {'values': [53, 230, 403, 302, 53, 392, 53]},
-        # 'learning_rate': {'values': [1e-3, 1e-4]},
-        # 'weight_decay': {'values': [1e-4]},
-        # 'encoder_type': {'values': ['cnn']},
-        # 'loss_type': {'values': ['vicreg']}
     }
 }
 

@@ -134,12 +134,12 @@ class CNNBackbone(nn.Module):
 
     def __init__(self, n_kernels, repr_dim, dropout=0.1, norm_features=False, num_layers=4):
         super().__init__()
-        assert 2 <= num_layers <= 10
+        assert num_layers >= 2  # Need at least 2 layers
         self.n_kernels = n_kernels
         self.repr_dim = repr_dim
         self.dropout = dropout
         self.norm_features = norm_features
-        self.num_layers = int(min(num_layers, 10))  # Cap at 10 layers and ensure integer
+        self.num_layers = int(num_layers)  # Ensure integer
 
         # Initial conv layer: 2 x 64 x 64 --> n_kernels x 64 x 64
         self.ConvLayer1 = nn.Sequential(
@@ -173,7 +173,12 @@ class CNNBackbone(nn.Module):
         self.additional_layers = nn.ModuleList()
         curr_channels = self.n_kernels*4
         for i in range(self.num_layers - 2):  # -2 because we already have 2 special layers
-            next_channels = self.n_kernels * 8 if i == 0 else self.n_kernels * 16
+            # Cap channel growth after a certain point to prevent memory explosion
+            if i < 3:  # First 3 additional layers can grow channels
+                next_channels = self.n_kernels * 8 if i == 0 else self.n_kernels * 16
+            else:  # After that, maintain constant channel count
+                next_channels = curr_channels
+                
             self.additional_layers.append(
                 nn.ModuleDict({
                     'resblock': nn.Sequential(
