@@ -66,7 +66,7 @@ sweep_config = {
     'metric': {'name': 'eval_normal_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256]},
-        'epochs': {'values': [16]},
+        'epochs': {'values': [20]},
         'num_kernels': {'values': [8]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
