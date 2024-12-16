@@ -44,10 +44,11 @@ def train_jepa(config=None):
             "--std_coeff", str(config.coeff),
             "--cov_coeff", str(config.coeff),
             "--seed", str(config.seed),
-            # "--learning_rate", str(config.learning_rate),
-            # "--weight_decay", str(config.weight_decay),
-            # "--encoder_type", str(config.encoder_type),
-            # "--loss_type", str(config.loss_type)
+            "--wall_n_kernels", str(config.wall_n_kernels),
+            "--agent_n_kernels", str(config.agent_n_kernels),
+            "--wall_n_layers", str(config.wall_n_layers), 
+            "--agent_n_layers", str(config.agent_n_layers),
+            "--repr_dim", str(config.repr_dim)
         ]
 
         print(f"Running command: {' '.join(cmd)}")
