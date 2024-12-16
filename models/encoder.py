@@ -163,15 +163,39 @@ class CNNBackbone(nn.Module):
         
         # n_kernels * 2 x 16 x 16 --> n_kernels * 16 x 4 x 4
         self.ResBlock2 = nn.Sequential(
-            ResidualLayer(self.n_kernels*4, self.n_kernels*8, stride=2),
-            ResidualLayer(self.n_kernels*8, self.n_kernels*16, stride=2),
+            ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
+            ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
         )
         self.SelfAttn2 = CNNSelfAttention(
+            n_channels=self.n_kernels*4,
+            n_heads=2 # 1 Head per 32 channels
+        )
+        self.Bn2 = nn.BatchNorm2d(self.n_kernels*4)
+
+        self.ResBlock3 = nn.Sequential(
+            ResidualLayer(self.n_kernels*4, self.n_kernels*8, stride=1),
+            ResidualLayer(self.n_kernels*8, self.n_kernels*8, stride=1),
+        )
+
+        self.SelfAttn3 = CNNSelfAttention(
+            n_channels=self.n_kernels*8,
+            n_heads=2 # 1 Head per 32 channels
+        )
+
+        self.Bn3 = nn.BatchNorm2d(self.n_kernels*8)
+
+        self.ResBlock4 = nn.Sequential(
+            ResidualLayer(self.n_kernels*8, self.n_kernels*16, stride=1),
+            ResidualLayer(self.n_kernels*16, self.n_kernels*16, stride=1),
+        )
+
+        self.SelfAttn4 = CNNSelfAttention(
             n_channels=self.n_kernels*16,
             n_heads=2 # 1 Head per 32 channels
         )
-        self.Bn2 = nn.BatchNorm2d(self.n_kernels*16)
-    
+
+        self.Bn4 = nn.BatchNorm2d(self.n_kernels*16)
+
         self.FC1 = nn.Sequential(
             nn.Flatten(),
             nn.Linear(in_features=self.n_kernels*16*4*4, out_features=self.repr_dim*2, bias=True),
@@ -184,6 +208,8 @@ class CNNBackbone(nn.Module):
         x = self.ConvLayer1(x) # 64x64 -> 32x32
         x = self.Bn1(self.SelfAttn1(self.ResBlock1(x))) # 32x32 -> 16x16
         x = self.Bn2(self.SelfAttn2(self.ResBlock2(x))) # 16x16 -> 8x8
+        x = self.Bn3(self.SelfAttn3(self.ResBlock3(x)))
+        x = self.Bn4(self.SelfAttn4(self.ResBlock4(x)))
         x = self.FC1(x)
 
         # Normalize the output
@@ -361,17 +387,7 @@ class ViTBackbone(nn.Module):
 if __name__ == "__main__":
     # Test transformer backbone
 
-    model = ViTBackbone(
-        image_size=65, 
-        patch_size=16, 
-        in_channels=2, 
-        embed_dim=128, 
-        num_heads=8, 
-        mlp_dim=256, 
-        num_layers=2
-    )
-
-    obs = torch.randn((64, 2, 65, 65))
-    pred_enc = model(obs)
-
-    print(pred_enc.size())
+    model = CNNBackbone(n_kernels=4, repr_dim=64, dropout=0.1, norm_features=True)
+    x = torch.randn(32, 1, 65, 65)
+    out = model(x)
+    print(out.shape)
