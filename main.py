@@ -79,7 +79,7 @@ def load_expert_data(device):
     return probe_train_expert_ds, probe_val_expert_ds
 
 
-def load_model():
+def load_model(device, config):
     """Load or initialize the model."""
     model = JEPA(device=device, config=config)
     return model
