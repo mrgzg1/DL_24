@@ -43,6 +43,7 @@ def train_jepa(config=None):
             "--batch_size", str(config.batch_size),
             "--std_coeff", str(config.coeff),
             "--cov_coeff", str(config.coeff),
+            "--seed", str(config.seed),
             # "--learning_rate", str(config.learning_rate),
             # "--weight_decay", str(config.weight_decay),
             # "--encoder_type", str(config.encoder_type),
@@ -68,7 +69,8 @@ sweep_config = {
         'epochs': {'values': [16]},
         'num_kernels': {'values': [8]},
         'repr_dim': {'values': [512]},
-        'coeff': {'values': [1, 0.5, 5, 10, 20]},
+        'coeff': {'values': [0.5]},
+        'seed': {'values': list(range(53,5300))}
         # 'learning_rate': {'values': [1e-3, 1e-4]},
         # 'weight_decay': {'values': [1e-4]},
         # 'encoder_type': {'values': ['cnn']},

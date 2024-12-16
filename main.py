@@ -10,8 +10,26 @@ import time
 import os
 import wandb
 from configs import parse_args, save_args, check_folder_paths, load_args
+import numpy as np
+import random
 
 CONFIG = None # used as global to save args
+
+def set_seed(seed):
+    """
+    Set the seed for reproducibility.
+    
+    Args:
+    seed (int): The seed value to use.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # for multi-GPU.
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 
 def get_device(args):
     """Set CUDA device based on gpu_id and return device."""
@@ -137,7 +155,7 @@ def load_model_weights(model, path, device):
 if __name__ == "__main__":
     args = parse_args()
     CONFIG = args
-
+    set_seed(args.seed)
     # Initialize wandb
     wandb.init(
         project="wall_jepa", 
