@@ -116,7 +116,7 @@ if __name__ == "__main__":
     device = get_device()
     
     # Load model weights from current directory
-    model_path = "model_weights.pth"
+    model_path = "./model_weights.pth"
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model weights not found at {model_path}")
         
