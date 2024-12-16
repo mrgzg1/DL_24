@@ -135,13 +135,13 @@ class ResidualLayer(nn.Module):
 
 class CNNBackbone(nn.Module):
 
-    def __init__(self, n_kernels, repr_dim, num_layers=4, dropout=0.1, norm_features=False):
+    def __init__(self, n_kernels, repr_dim, dropout=0.1, norm_features=False, num_layers=4):
         super().__init__()
         self.n_kernels = n_kernels
         self.repr_dim = repr_dim
         self.dropout = dropout
         self.norm_features = norm_features
-        self.num_layers = min(num_layers, 10)  # Cap at 10 layers
+        self.num_layers = int(min(num_layers, 10))  # Cap at 10 layers and ensure integer
 
         # Initial conv layer: 2 x 64 x 64 --> n_kernels x 64 x 64
         self.ConvLayer1 = nn.Sequential(
