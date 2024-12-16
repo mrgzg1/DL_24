@@ -278,11 +278,11 @@ class TrainJEPA():
         # Save model locally
         torch.save(self.model.state_dict(), save_path)
         
-        # Log model artifact to wandb
-        artifact = wandb.Artifact(
-            artifact_name,
-            type="model",
-            description=f"Model checkpoint at iteration {i if i is not None else 'best'}"
-        )
-        artifact.add_file(save_path)
-        wandb.log_artifact(artifact)
+        # # Log model artifact to wandb
+        # artifact = wandb.Artifact(
+        #     artifact_name,
+        #     type="model",
+        #     description=f"Model checkpoint at iteration {i if i is not None else 'best'}"
+        # )
+        # artifact.add_file(save_path)
+        # wandb.log_artifact(artifact)
