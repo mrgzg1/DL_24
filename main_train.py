@@ -139,11 +139,11 @@ if __name__ == "__main__":
     CONFIG = args
 
     # Initialize wandb
-    wandb.init(
-        project="wall_jepa", 
-        name=args.experiment_name,
-        config=args
-    )
+    #wandb.init(
+    #    project="wall_jepa", 
+    #    name=args.experiment_name,
+    #    config=args
+    #)
 
     folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
     resources_path = os.path.join(folder_path, "resources")
@@ -154,10 +154,7 @@ if __name__ == "__main__":
     if not args.eval:
         # Check if experiment directory already exists
         if os.path.exists(experiment_path):
-            response = input(f"Warning: Experiment directory {experiment_path} already exists. Continue and overwrite? [y/N] ")
-            if response.lower() != 'y':
-                print("Aborting...")
-                sys.exit(0)
+            print(f"Warning: Experiment directory {experiment_path} already exists.")
                 
         check_folder_paths([os.path.join(experiment_path, "checkpoints")])
         # save arguments
