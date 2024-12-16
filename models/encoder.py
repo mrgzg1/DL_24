@@ -3,9 +3,81 @@ from torch import nn
 from torch.nn import functional as F
 import math
 
+#################### Positional Encoding ####################
+class PositionalEncoding2D(nn.Module):
+    """
+    Add 2D sinusoidal positional embeddings to a 2D map. This helps the model
+    encode absolute positions of features in the spatial grid.
 
+    Positional encoding shape:
+    For a HxW map, we create embeddings for row and column:
+    - p(row, col) = concat(pos(row), pos(col)) 
+    pos(i) uses sin/cos functions of different frequencies.
 
+    We'll add these embeddings directly to the input.
+    """
+    def __init__(self, height, width, channel_dim):
+        super(PositionalEncoding2D, self).__init__()
+        # channel_dim should be even and divisible by 4 for simplicity
+        # half for row, half for col
+        assert channel_dim % 4 == 0, "channel_dim must be divisible by 4."
+        self.height = height
+        self.width = width
+        self.channel_dim = channel_dim
+        self.div_term = torch.exp(torch.arange(0, channel_dim//2, 2).float() * 
+                                  -(torch.log(torch.tensor(10000.0)) / (channel_dim//2)))
+        
+    def forward(self, x):
+        """
+        x: [B, 1, H, W] input wall channel
+        We'll produce positional embeddings [H, W, C] and add them to x.
+        """
+        B, C, H, W = x.shape
+        device = x.device
+        # Ensure we are working with the correct shapes
+        # We'll split channel_dim/2 for rows and channel_dim/2 for cols
+        channel_dim = self.channel_dim
+        half_dim = channel_dim // 2
+        row_dim = half_dim // 2
+        col_dim = half_dim // 2
 
+        # Generate row positions [H]
+        row_positions = torch.arange(H, device=device).unsqueeze(1)  # [H,1]
+        # Generate column positions [W]
+        col_positions = torch.arange(W, device=device).unsqueeze(1)  # [W,1]
+
+        # Encode row positions with sin/cos
+        row_angle = row_positions * self.div_term[:row_dim]
+        row_sin = torch.sin(row_angle)
+        row_cos = torch.cos(row_angle)
+        row_embed = torch.cat((row_sin, row_cos), dim=1)  # [H, row_dim*2]
+
+        # Encode col positions with sin/cos
+        col_angle = col_positions * self.div_term[:col_dim]
+        col_sin = torch.sin(col_angle)
+        col_cos = torch.cos(col_angle)
+        col_embed = torch.cat((col_sin, col_cos), dim=1)  # [W, col_dim*2]
+
+        # Combine row and col into a grid
+        # row_embed: [H, row_dim*2]
+        # col_embed: [W, col_dim*2]
+        # final pe: [H, W, channel_dim]
+        row_embed = row_embed.unsqueeze(1).expand(H, W, row_dim*2)
+        col_embed = col_embed.unsqueeze(0).expand(H, W, col_dim*2)
+        pos_embed = torch.cat((row_embed, col_embed), dim=2)  # [H, W, channel_dim]
+
+        # Add positional encoding to x
+        pos_embed = pos_embed.permute(2, 0, 1).unsqueeze(0) # [1, C, H, W]
+        # If x has only 1 channel, we may need to broadcast or project pos_embed
+        # We project pos_embed to match x's channel dimension via a 1x1 conv if needed
+        # Or directly add if the dimension matches:
+        # For simplicity, assume we want to append positional channels:
+        if pos_embed.size(1) != C:
+            # Project positional embedding to match x's channel size:
+            projector = nn.Conv2d(pos_embed.size(1), C, kernel_size=1).to(device)
+            pos_embed = projector(pos_embed)
+
+        return x + pos_embed
 
 ################ ENCODER #####################
 
@@ -23,6 +95,9 @@ class Encoder(nn.Module):
         self.wall_encoder = self._get_backbone(config, "wall",)
         self.agent_encoder = self._get_backbone(config, "agent")
         self.fusion = nn.Linear(repr_dim*2, repr_dim)
+        
+        # Add positional encoding for wall channel
+        self.wall_pos_enc = PositionalEncoding2D(height=65, width=65, channel_dim=4)
 
     def _get_backbone(self, config, for_who):
         backbone = config.encoder_type
@@ -34,7 +109,11 @@ class Encoder(nn.Module):
             raise NotImplementedError
     
     def forward(self, x):
-        wall_repr = self.wall_encoder(x[:, 0].unsqueeze(1))
+        # Add positional encoding to wall channel
+        wall_x = x[:, 0].unsqueeze(1)
+        wall_x = self.wall_pos_enc(wall_x)
+        wall_repr = self.wall_encoder(wall_x)
+        
         agent_repr = self.agent_encoder(x[:, 1].unsqueeze(1))
         x = torch.cat((wall_repr, agent_repr), dim=-1)
         x = self.fusion(x)
