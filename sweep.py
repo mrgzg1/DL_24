@@ -66,7 +66,7 @@ sweep_config = {
     'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256]},
-        'epochs': {'values': [16]},
+        'epochs': {'values': [50]},
         # best perf, both were 8
         'wall_n_kernels': {'values': [4,8,16]},
         'agent_n_kernels': {'values': [2,4,8]},
