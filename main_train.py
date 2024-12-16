@@ -8,7 +8,6 @@ import glob
 import sys
 import time
 import os
-import wandb
 from configs import parse_args, save_args, check_folder_paths, load_args
 
 CONFIG = None # used as global to save args
@@ -121,7 +120,6 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
 
     for probe_attr, loss in avg_losses.items():
         print(f"{probe_attr} loss: {loss}")
-        wandb.log({f"eval_{probe_attr}_loss": loss})
 
 def train_jepa(device, model, train_ds, config, save_path):
     trainer = TrainJEPA(device=device, model=model, train_ds=train_ds, config=config, save_path=save_path)
@@ -137,13 +135,6 @@ def load_model_weights(model, path, device):
 if __name__ == "__main__":
     args = parse_args()
     CONFIG = args
-
-    # Initialize wandb
-    #wandb.init(
-    #    project="wall_jepa", 
-    #    name=args.experiment_name,
-    #    config=args
-    #)
 
     folder_path = "/".join(sys.path[0].split("/")[:]) + "/"
     resources_path = os.path.join(folder_path, "resources")
