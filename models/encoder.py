@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torchvision.models import resnet18, resnet34, resnet50
 from torch.nn import functional as F
 import math
 
@@ -136,86 +135,85 @@ class ResidualLayer(nn.Module):
 
 class CNNBackbone(nn.Module):
 
-    def __init__(self, n_kernels, repr_dim, dropout=0.1, norm_features=False):
+    def __init__(self, n_kernels, repr_dim, num_layers=4, dropout=0.1, norm_features=False):
         super().__init__()
         self.n_kernels = n_kernels
         self.repr_dim = repr_dim
         self.dropout = dropout
         self.norm_features = norm_features
+        self.num_layers = min(num_layers, 10)  # Cap at 10 layers
 
-        # 2 x 64 x 64 --> n_kernels x 64 x 64
+        # Initial conv layer: 2 x 64 x 64 --> n_kernels x 64 x 64
         self.ConvLayer1 = nn.Sequential(
             nn.Conv2d(1, self.n_kernels, kernel_size=3), 
             nn.BatchNorm2d(self.n_kernels),
             nn.ReLU(inplace=True)
         )        
         
-        # n_kernels x 64 x 64 --> n_kernels * 4 x 16 x 16
+        # First two special layers with stride=2
         self.ResBlock1 = nn.Sequential(
             ResidualLayer(self.n_kernels, self.n_kernels*2, stride=2),
             ResidualLayer(self.n_kernels*2, self.n_kernels*4, stride=2),
         )
         self.SelfAttn1 = CNNSelfAttention(
             n_channels=self.n_kernels*4,
-            n_heads=2 # 1 Head per 32 channels
+            n_heads=2
         )
         self.Bn1 = nn.BatchNorm2d(self.n_kernels*4)
         
-        # n_kernels * 2 x 16 x 16 --> n_kernels * 16 x 4 x 4
         self.ResBlock2 = nn.Sequential(
             ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
             ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
         )
         self.SelfAttn2 = CNNSelfAttention(
             n_channels=self.n_kernels*4,
-            n_heads=2 # 1 Head per 32 channels
+            n_heads=2
         )
         self.Bn2 = nn.BatchNorm2d(self.n_kernels*4)
 
-        self.ResBlock3 = nn.Sequential(
-            ResidualLayer(self.n_kernels*4, self.n_kernels*8, stride=1),
-            ResidualLayer(self.n_kernels*8, self.n_kernels*8, stride=1),
-        )
-
-        self.SelfAttn3 = CNNSelfAttention(
-            n_channels=self.n_kernels*8,
-            n_heads=2 # 1 Head per 32 channels
-        )
-
-        self.Bn3 = nn.BatchNorm2d(self.n_kernels*8)
-
-        self.ResBlock4 = nn.Sequential(
-            ResidualLayer(self.n_kernels*8, self.n_kernels*16, stride=1),
-            ResidualLayer(self.n_kernels*16, self.n_kernels*16, stride=1),
-        )
-
-        self.SelfAttn4 = CNNSelfAttention(
-            n_channels=self.n_kernels*16,
-            n_heads=2 # 1 Head per 32 channels
-        )
-
-        self.Bn4 = nn.BatchNorm2d(self.n_kernels*16)
+        # Additional layers with stride=1
+        self.additional_layers = nn.ModuleList()
+        curr_channels = self.n_kernels*4
+        for i in range(self.num_layers - 2):  # -2 because we already have 2 special layers
+            next_channels = self.n_kernels * 8 if i == 0 else self.n_kernels * 16
+            self.additional_layers.append(
+                nn.ModuleDict({
+                    'resblock': nn.Sequential(
+                        ResidualLayer(curr_channels, next_channels, stride=1),
+                        ResidualLayer(next_channels, next_channels, stride=1),
+                    ),
+                    'attention': CNNSelfAttention(
+                        n_channels=next_channels,
+                        n_heads=2
+                    ),
+                    'bn': nn.BatchNorm2d(next_channels)
+                })
+            )
+            curr_channels = next_channels
 
         self.FC1 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=self.n_kernels*16*4*4, out_features=self.repr_dim*2, bias=True),
+            nn.Linear(in_features=curr_channels*4*4, out_features=self.repr_dim*2, bias=True),
             nn.Dropout(p=self.dropout),
             nn.ReLU(),
             nn.Linear(in_features=self.repr_dim*2, out_features=self.repr_dim, bias=True)
         )
     
     def forward(self, x):
-        x = self.ConvLayer1(x) # 64x64 -> 32x32
-        x = self.Bn1(self.SelfAttn1(self.ResBlock1(x))) # 32x32 -> 16x16
-        x = self.Bn2(self.SelfAttn2(self.ResBlock2(x))) # 16x16 -> 8x8
-        x = self.Bn3(self.SelfAttn3(self.ResBlock3(x)))
-        x = self.Bn4(self.SelfAttn4(self.ResBlock4(x)))
+        x = self.ConvLayer1(x)
+        x = self.Bn1(self.SelfAttn1(self.ResBlock1(x)))
+        x = self.Bn2(self.SelfAttn2(self.ResBlock2(x)))
+        
+        # Process additional layers
+        for layer in self.additional_layers:
+            x = layer['bn'](layer['attention'](layer['resblock'](x)))
+
         x = self.FC1(x)
 
         # Normalize the output
         if self.norm_features:
             x = F.normalize(x, dim=-1)
-        return x # (batch_size, n_kernels * 16)
+        return x
 
 
 ############### Transformer Encoder ####################
