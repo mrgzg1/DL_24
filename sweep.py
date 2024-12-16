@@ -63,17 +63,17 @@ def train_jepa(config=None):
 
 # Define sweep configuration 
 sweep_config = {
-    'method': 'grid',
+    'method': 'bayes',
     'metric': {'name': 'eval/combined_loss', 'goal': 'minimize'},
     'parameters': {
         'batch_size': {'values': [256]},
         'epochs': {'values': [50]},
-        # best perf, both were 8
-        'wall_n_kernels': {'values': [4,8,16]},
-        'agent_n_kernels': {'values': [2,4,8]},
         # best perf, both were 2
-        'wall_n_layers': {'values': [4,8,10]},
+        'wall_n_layers': {'values': [4,8,16]},
         'agent_n_layers': {'values': [2,4,6]},
+        # best perf, both were 8
+        'wall_n_kernels': {'values': [8, 16]},
+        'agent_n_kernels': {'values': [8, 2, 4]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
         'seed': {'values': [53]},
