@@ -134,7 +134,7 @@ class CNNBackbone(nn.Module):
 
     def __init__(self, n_kernels, repr_dim, dropout=0.1, norm_features=False, num_layers=4):
         super().__init__()
-        assert num_layers >= 2  # Need at least 2 layers
+        assert num_layers >= 1  # Need at least 1 layer
         self.n_kernels = n_kernels
         self.repr_dim = repr_dim
         self.dropout = dropout
@@ -148,7 +148,7 @@ class CNNBackbone(nn.Module):
             nn.ReLU(inplace=True)
         )        
         
-        # First two special layers with stride=2
+        # First layer with stride=2
         self.ResBlock1 = nn.Sequential(
             ResidualLayer(self.n_kernels, self.n_kernels*2, stride=2),
             ResidualLayer(self.n_kernels*2, self.n_kernels*4, stride=2),
@@ -159,20 +159,22 @@ class CNNBackbone(nn.Module):
         )
         self.Bn1 = nn.BatchNorm2d(self.n_kernels*4)
         
-        self.ResBlock2 = nn.Sequential(
-            ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
-            ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
-        )
-        self.SelfAttn2 = CNNSelfAttention(
-            n_channels=self.n_kernels*4,
-            n_heads=2
-        )
-        self.Bn2 = nn.BatchNorm2d(self.n_kernels*4)
+        # Second layer with stride=2 (only if num_layers >= 2)
+        if num_layers >= 2:
+            self.ResBlock2 = nn.Sequential(
+                ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
+                ResidualLayer(self.n_kernels*4, self.n_kernels*4, stride=2),
+            )
+            self.SelfAttn2 = CNNSelfAttention(
+                n_channels=self.n_kernels*4,
+                n_heads=2
+            )
+            self.Bn2 = nn.BatchNorm2d(self.n_kernels*4)
 
         # Additional layers with stride=1
         self.additional_layers = nn.ModuleList()
         curr_channels = self.n_kernels*4
-        for i in range(self.num_layers - 2):  # -2 because we already have 2 special layers
+        for i in range(max(0, self.num_layers - 2)):  # -2 because we already have up to 2 special layers
             # Cap channel growth after a certain point to prevent memory explosion
             if i < 3:  # First 3 additional layers can grow channels
                 next_channels = self.n_kernels * 8 if i == 0 else self.n_kernels * 16
@@ -194,9 +196,15 @@ class CNNBackbone(nn.Module):
             )
             curr_channels = next_channels
 
+        # Adjust input features for FC layer based on num_layers
+        if num_layers == 1:
+            fc_in_features = curr_channels*16*16  # Only 2 stride-2 layers from ResBlock1
+        else:
+            fc_in_features = curr_channels*4*4    # 4 stride-2 layers total
+
         self.FC1 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=curr_channels*4*4, out_features=self.repr_dim*2, bias=True),
+            nn.Linear(in_features=fc_in_features, out_features=self.repr_dim*2, bias=True),
             nn.Dropout(p=self.dropout),
             nn.ReLU(),
             nn.Linear(in_features=self.repr_dim*2, out_features=self.repr_dim, bias=True)
@@ -205,7 +213,9 @@ class CNNBackbone(nn.Module):
     def forward(self, x):
         x = self.ConvLayer1(x)
         x = self.Bn1(self.SelfAttn1(self.ResBlock1(x)))
-        x = self.Bn2(self.SelfAttn2(self.ResBlock2(x)))
+        
+        if self.num_layers >= 2:
+            x = self.Bn2(self.SelfAttn2(self.ResBlock2(x)))
         
         # Process additional layers
         for layer in self.additional_layers:
