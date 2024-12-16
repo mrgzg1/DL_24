@@ -70,7 +70,7 @@ sweep_config = {
         'num_kernels': {'values': [8]},
         'repr_dim': {'values': [512]},
         'coeff': {'values': [0.5]},
-        'seed': {'values': [53, 230, 403, 302, 53, 392, 53]},
+        'seed': {'values': list(range(53, 530))},
         # 'learning_rate': {'values': [1e-3, 1e-4]},
         # 'weight_decay': {'values': [1e-4]},
         # 'encoder_type': {'values': ['cnn']},
