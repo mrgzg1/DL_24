@@ -64,7 +64,6 @@ def parse_args():
     parser.add_argument('--norm_features',         type=bool,      default=False)
 
     ## Transformer Encoder specific arguments
-    parser.add_argument('--num_layers',            type=int,       default=2)
     parser.add_argument('--num_heads',             type=int,       default=8)
     parser.add_argument('--d_model',               type=int,       default=64)
     parser.add_argument('--dim_feedforward',       type=int,       default=128)
@@ -94,7 +93,11 @@ def parse_args():
     parser.add_argument('--experiment_name',        type=str,      default=None)
     parser.add_argument('--eval',                  action='store_true')
     parser.add_argument('--repr_dim', type=int,      default=512)
-    parser.add_argument('--num_kernels', type=int,      default=8)
+    parser.add_argument('--wall_n_kernels', type=int,      default=8)
+    parser.add_argument('--agent_n_kernels', type=int,      default=8)
+    parser.add_argument('--wall_n_layers',            type=int,       default=4)
+    parser.add_argument('--agent_n_layers',            type=int,       default=4)
+
 
 
 

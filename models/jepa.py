@@ -43,7 +43,7 @@ class JEPA(nn.Module):
         self.repr_dim = enc_dim
         self.config = config
         # self.encoder = Encoder(n_kernels=4, repr_dim=enc_dim)
-        self.encoder = Encoder(n_kernels=8, repr_dim=enc_dim, config=config)
+        self.encoder = Encoder(repr_dim=enc_dim, config=config)
         self.target_encoder = self.get_target_encoder()
         self.predictor = Predictor(enc_dim=enc_dim, action_dim=action_dim, 
                                    arch="1024-512-256", n_steps=n_steps, 
