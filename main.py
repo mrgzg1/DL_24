@@ -16,7 +16,6 @@ def get_device():
 
 def load_data(device):
     data_path = "/scratch/DL24FA"
-    data_path = "/data/dataset/DL2572" # UNDO ME
 
     probe_train_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_normal/train",
@@ -57,7 +56,6 @@ def load_data(device):
 
 def load_expert_data(device):
     data_path = "/scratch/DL24FA"
-    data_path = "/data/dataset/DL2572" # UNDO ME
 
 
     probe_train_expert_ds = create_wall_dataloader(
