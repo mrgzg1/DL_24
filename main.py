@@ -16,6 +16,7 @@ def get_device():
 
 def load_data(device):
     data_path = "/scratch/DL24FA"
+    data_path = "/data/dataset/DL24FA" # UNDO ME
 
     probe_train_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_normal/train",
@@ -56,6 +57,8 @@ def load_data(device):
 
 def load_expert_data(device):
     data_path = "/scratch/DL24FA"
+    data_path = "/data/dataset/DL24FA" # UNDO ME
+
 
     probe_train_expert_ds = create_wall_dataloader(
         data_path=f"{data_path}/probe_expert/train",
@@ -113,7 +116,7 @@ if __name__ == "__main__":
     device = get_device()
     
     # Load model weights from current directory
-    model_path = "best_model.pth"
+    model_path = "model_weights.pth"
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model weights not found at {model_path}")
         
