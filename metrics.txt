@@ -5,3 +5,4 @@ probe_wall_other val loss: 10.89
 probe_expert val loss: 5.07
 trainable_params: 7,774,116
 # training command to replicate your submitted model
+python ./main_train.py
